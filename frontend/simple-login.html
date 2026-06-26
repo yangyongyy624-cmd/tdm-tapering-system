@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 登录</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,sans-serif;background:#f5f7fa;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;padding:40px 30px;width:100%;max-width:360px;box-shadow:0 4px 20px rgba(0,0,0,.08);text-align:center}
+.logo{font-size:48px;margin-bottom:16px}
+h1{font-size:22px;margin-bottom:8px;color:#1a1a2e}
+.sub{font-size:14px;color:#64748b;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:24px}
+.tab{flex:1;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:#fff;color:#64748b;transition:all .15s}
+.tab.active{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed}
+.tab.doctor.active{border-color:#3b82f6;background:#eff6ff;color:#2563eb}
+.tab.admin.active{border-color:#7c3aed;background:#faf5ff;color:#7c3aed}
+input{width:100%;padding:16px;border:2px solid #e2e8f0;border-radius:12px;font-size:24px;text-align:center;letter-spacing:8px;font-family:monospace;outline:none;margin-bottom:16px}
+input:focus{border-color:#7c3aed}
+input.err{border-color:#ef4444;background:#fef2f2}
+button{width:100%;padding:16px;background:#7c3aed;color:#fff;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer}
+button:active{background:#6d28d9}
+button.admin-btn{background:#6d28d9}
+button.admin-btn:active{background:#5b21b6}
+.err{color:#ef4444;font-size:14px;min-height:20px;margin-bottom:12px}
+.help{font-size:12px;color:#94a3b8;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">️</div>
+  <h1>TDM 登录</h1>
+  <div class="tabs">
+    <div class="tab doctor active" onclick="setRole('doctor')">⚕️ 医生</div>
+    <div class="tab admin" onclick="setRole('admin')">🔐 管理员</div>
+  </div>
+  <p class="sub" id="sub">输入 4 位 PIN 码</p>
+  <input id="pin" type="tel" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="····" autofocus>
+  <div class="err" id="err"></div>
+  <button id="btn" onclick="doLogin()">进入</button>
+  <p class="help" id="help">医生默认 PIN: 7655</p>
+</div>
+<script>
+var API = location.origin;
+var role = 'doctor';
+var pin = document.getElementById('pin');
+var err = document.getElementById('err');
+var btn = document.getElementById('btn');
+var help = document.getElementById('help');
+var sub = document.getElementById('sub');
+
+function setRole(r) {
+  role = r;
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  if (r === 'doctor') {
+    document.querySelector('.tab.doctor').classList.add('active');
+    pin.maxLength = 4;
+    sub.textContent = '输入 4 位 PIN 码';
+    help.textContent = '医生默认 PIN: 7655';
+    btn.className = '';
+  } else {
+    document.querySelector('.tab.admin').classList.add('active');
+    pin.maxLength = 6;
+    sub.textContent = '输入 6 位密码';
+    help.textContent = '管理员默认密码: 888888';
+    btn.className = 'admin-btn';
+  }
+  err.textContent = '';
+  pin.value = '';
+  pin.focus();
+}
+
+pin.addEventListener('input', function() {
+  this.classList.remove('err');
+  err.textContent = '';
+});
+pin.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogin() {
+  var p = pin.value;
+  var minLen = role === 'admin' ? 6 : 4;
+  if (p.length < minLen) { err.textContent = '请输入 ' + minLen + ' 位数字'; return; }
+  fetch(API + '/api/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({pin: p})
+  }).then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.valid) {
+      if (role === 'admin' && d.role !== 'admin') {
+        pin.classList.add('err');
+        err.textContent = '此 PIN 不是管理员账号';
+        return;
+      }
+      localStorage.setItem('tdm_auth_token', d.token);
+      localStorage.setItem('tdm_role', d.role);
+      localStorage.setItem('tdm_doctor_name', d.name);
+      if (d.role === 'admin') {
+        location.replace('/admin-home.html');
+      } else {
+        location.replace('/doctor-home.html?pin=' + p);
+      }
+    } else {
+      pin.classList.add('err');
+      err.textContent = d.error || 'PIN 错误';
+      pin.value = '';
+      pin.focus();
+    }
+  }).catch(function() {
+    err.textContent = '网络错误';
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 减药决策矩阵</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--primary:#7c3aed;--primary-dark:#6d28d9;--bg:#f5f7fa;--card:#fff;--border:#e2e8f0;--text:#1a1a2e;--sec:#64748b;--danger:#ef4444;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--radius:16px}
+body{font-family:-apple-system,"SF Pro SC","PingFang SC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+.header{background:var(--primary);color:#fff;padding:16px 20px;padding-top:max(16px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.header-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer}
+.view{display:none;padding:16px 20px 200px}
+.view.active{display:block}
+
+/* Role Selection */
+.role-view{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:40px 20px;background:var(--bg);position:fixed;inset:0;z-index:200}
+.role-view.active{display:flex}
+.role-logo{font-size:56px;margin-bottom:8px}
+.role-title{font-size:24px;font-weight:700;margin-bottom:4px;color:var(--primary)}
+.role-sub{font-size:14px;color:var(--sec);margin-bottom:40px;text-align:center}
+.role-cards{display:flex;gap:16px;width:100%;max-width:320px}
+.role-card{flex:1;background:var(--card);border-radius:var(--radius);padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;transition:all .15s;border:2px solid transparent}
+.role-card:active{transform:scale(.96)}.role-card.selected{border-color:var(--primary);background:#f5f3ff}
+.role-card .icon{font-size:32px;margin-bottom:8px}
+.role-card .name{font-size:16px;font-weight:600;margin-bottom:4px}
+.role-card .desc{font-size:12px;color:var(--sec)}
+.role-btn{width:100%;max-width:320px;padding:14px;margin-top:32px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;opacity:.4;pointer-events:none;transition:all .15s}
+.role-btn.active{opacity:1;pointer-events:auto}
+.role-btn:active{background:var(--primary-dark);transform:scale(.98)}
+
+/* PIN Login */
+.pin-view{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:40px 20px;background:var(--bg);position:fixed;inset:0;z-index:200}
+.pin-view.active{display:flex}
+.pin-back{position:absolute;top:16px;left:16px;background:none;border:none;font-size:24px;color:var(--sec);cursor:pointer;padding:8px}
+.pin-icon{font-size:56px;margin-bottom:16px}
+.pin-role{font-size:14px;color:var(--primary);font-weight:600;margin-bottom:4px}
+.pin-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.pin-sub{font-size:14px;color:var(--sec);margin-bottom:32px;text-align:center}
+.pin-inputs{display:flex;gap:10px;margin-bottom:24px}
+.pin-digit{width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;border:2px solid var(--border);border-radius:12px;background:var(--card);outline:none;transition:all .15s;font-family:"SF Mono",monospace}
+.pin-digit:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.pin-digit.filled{border-color:var(--primary);background:#f5f3ff}
+.pin-digit.error{border-color:var(--danger);background:#fef2f2;animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pin-error{color:var(--danger);font-size:14px;min-height:20px;margin-bottom:12px;text-align:center}
+.pin-btn{width:100%;max-width:240px;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all .15s}
+.pin-btn:active{background:var(--primary-dark);transform:scale(.98)}
+.pin-help{font-size:12px;color:var(--sec);margin-top:24px;text-align:center;line-height:1.6}
+
+/* Veto */
+.veto-banner{background:#fee2e2;border:2px solid #ef4444;color:#991b1b;padding:14px;border-radius:12px;margin-bottom:16px;font-weight:600;display:flex;align-items:center;gap:10px;font-size:14px}
+
+/* Forms */
+.patient-input{display:flex;gap:8px;margin-bottom:16px}
+.patient-input input{flex:1;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none}
+.patient-input input:focus{border-color:var(--primary)}
+.patient-input button{padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.admin-input{display:flex;gap:8px;margin-bottom:12px}
+.admin-input input,.admin-input select{flex:1;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none}
+.admin-input input:focus,.admin-input select:focus{border-color:var(--primary)}
+
+/* History */
+.hist-item{background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border-left:3px solid var(--border);cursor:pointer}
+.hist-item.h-continue{border-left-color:var(--green)}.hist-item.h-slow_down{border-left-color:var(--yellow)}
+.hist-item.h-pause,.hist-item.h-reinstate,.hist-item.h-emergency{border-left-color:var(--red)}
+.hist-date{font-size:12px;color:var(--sec)}
+.hist-decision{font-size:14px;font-weight:600;margin:4px 0}
+.hist-scores{font-size:12px;color:var(--sec)}
+
+/* Scale Cards */
+.scale-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.scale-card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;transition:all .15s}
+.scale-card:active{transform:scale(.98)}
+.scale-card.pending{border:2px dashed var(--border);opacity:.8}
+.scale-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.scale-card-name{font-size:15px;font-weight:600}
+.status-badge{font-size:11px;padding:3px 8px;border-radius:8px;font-weight:600}
+.status-completed{background:#dcfce7;color:#166534}
+.status-pending{background:#fef3c7;color:#92400e}
+.scale-card-score{font-size:18px;font-weight:700;margin:4px 0}
+.scale-card-label{font-size:12px;color:var(--sec)}
+.scale-card-date{font-size:11px;color:var(--sec)}
+.scale-card-actions{margin-top:8px;display:flex;gap:6px}
+.scale-card-actions button{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer}
+.btn-detail{background:#f1f5f9;color:var(--text)}
+.btn-assign{background:var(--primary);color:#fff}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:flex-end;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal-content{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;padding:24px 20px 40px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:24px;color:var(--sec);cursor:pointer}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:16px}
+.detail-q{padding:12px 0;border-bottom:1px solid var(--border)}
+.detail-q:last-child{border-bottom:none}
+.detail-q-label{font-size:14px;font-weight:600;margin-bottom:6px}
+.detail-q-pending{font-size:14px;color:#999;font-style:italic;padding:6px 10px;margin-top:4px}
+.detail-q-answer{font-size:14px;color:#ef4444;font-weight:600;padding:6px 10px;background:#FEF2F2;border-radius:8px;border-left:3px solid #ef4444;margin-top:4px}
+
+/* QR */
+.qr-display{text-align:center;padding:16px}
+.qr-code-img{margin:12px auto;display:block;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.qr-code-text{font-size:24px;font-weight:700;color:var(--primary);letter-spacing:4px;font-family:"SF Mono",monospace}
+.qr-url{font-size:12px;color:var(--sec);word-break:break-all;background:var(--bg);padding:8px;border-radius:8px;margin-top:8px}
+
+/* Admin tabs */
+.admin-tabs{display:flex;gap:4px;margin-bottom:16px}
+.admin-tab{flex:1;padding:10px;text-align:center;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:var(--card);border:2px solid var(--border);transition:all .15s}
+.admin-tab.active{border-color:var(--primary);background:#f5f3ff;color:var(--primary)}
+.admin-panel{display:none}
+.admin-panel.active{display:block}
+
+/* Admin report list */
+.report-item{background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border-left:3px solid var(--border)}
+.report-item.h-pause,.report-item.h-reinstate,.report-item.h-emergency{border-left-color:var(--red)}
+.report-item-header{display:flex;justify-content:space-between;align-items:center}
+.report-check{display:none;margin-right:8px}
+.select-mode .report-check{display:inline}
+.select-mode .report-item{padding-left:4px}
+
+/* PIN items */
+.pin-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.pin-item:last-child{border-bottom:none}
+.pin-code{font-family:"SF Mono",monospace;font-size:20px;font-weight:700;color:var(--primary)}
+.pin-name{font-size:14px;font-weight:500}
+.pin-meta{font-size:12px;color:var(--sec)}
+.badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.badge-admin{background:#dbeafe;color:#1e40af}.badge-doctor{background:#f5f3ff;color:#7c3aed}
+.badge-active{background:#dcfce7;color:#166534}.badge-inactive{background:#fee2e2;color:#991b1b}
+
+.empty{text-align:center;padding:40px;color:var(--sec)}
+.back-btn{display:inline-block;padding:10px 20px;background:#f1f5f9;border:none;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:16px}
+.decision-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.dec-continue{background:#dcfce7;color:#166534}.dec-slow_down{background:#fef3c7;color:#92400e}
+.dec-pause{background:#fee2e2;color:#991b1b}.dec-reinstate{background:#fecaca;color:#7f1d1b}
+.btn{padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-danger{background:var(--danger)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+.btn-outline{background:transparent;border:2px solid var(--primary);color:var(--primary)}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+</style>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+</head>
+<body>
+
+<!-- Role Selection -->
+<div class="role-view active" id="roleView">
+<div class="role-logo">🔬</div>
+<div class="role-title">TDM 减药决策矩阵</div>
+<div class="role-sub">选择您的身份</div>
+<div class="role-cards">
+<div class="role-card" id="roleDoctor" onclick="selectRole('doctor')"><div class="icon">‍⚕️</div><div class="name">医生</div><div class="desc">查看患者评估</div></div>
+<div class="role-card" id="roleAdmin" onclick="selectRole('admin')"><div class="icon">🔐</div><div class="name">管理员</div><div class="desc">管理医生与数据</div></div>
+</div>
+<button class="role-btn" id="roleBtn" onclick="goToPIN()">下一步</button>
+</div>
+
+<!-- PIN Login -->
+<div class="pin-view" id="pinView">
+<button class="pin-back" onclick="backToRole()">←</button>
+<div class="pin-icon"></div>
+<div class="pin-role" id="pinRole">医生端</div>
+<div class="pin-title">输入访问码</div>
+<div class="pin-sub" id="pinSub">4 位数字 PIN 码</div>
+<div class="pin-inputs" id="pinInputs">
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autofocus>
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+</div>
+<div class="pin-error" id="pinError"></div>
+<button class="pin-btn" id="pinBtn" onclick="checkPIN()">进入</button>
+<div class="pin-help" id="pinHelp">医生默认 PIN: 7655</div>
+</div>
+
+<!-- Doctor Main -->
+<div id="doctorView" style="display:none">
+<div class="header">
+<div class="header-title" id="doctorHeaderTitle">🔬 TDM v3</div>
+<button class="header-btn" onclick="logout()">退出</button>
+</div>
+<!-- Patient list -->
+<div class="view active" id="listView">
+<div class="patient-input">
+<input type="text" id="patientId" placeholder="name/phone" onkeydown="if(event.key==='Enter')searchPatient()">
+<button onclick="searchPatient()">搜索</button>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h2 style="font-size:16px">📋 我的患者</h2>
+<button class="btn btn-sm" onclick="showCreateSession()">+ 新建评估</button>
+</div>
+<div id="patientList"><div class="empty">加载中...</div></div>
+</div>
+<!-- Scale Cards -->
+<div class="view" id="scaleView">
+<button class="back-btn" onclick="showView('listView')">← 返回列表</button>
+<div id="vetoBanner"></div>
+<div id="scaleHeader" style="margin-bottom:12px"></div>
+<div id="scaleGrid" class="scale-grid"></div>
+</div>
+</div>
+
+<!-- Admin Main -->
+<div id="adminView" style="display:none">
+<div class="header">
+<div class="header-title">🔐 TDM 管理后台</div>
+<button class="header-btn" onclick="logout()">退出</button>
+</div>
+<div class="view active" id="adminView">
+<!-- Tabs -->
+<div class="admin-tabs">
+<div class="admin-tab active" onclick="switchAdminTab('pinsTab')">医生管理</div>
+<div class="admin-tab" onclick="switchAdminTab('reportTab')">患者量表</div>
+<div class="admin-tab" onclick="switchAdminTab('pwdTab')">改密码</div>
+</div>
+<!-- Tab: PIN Management -->
+<div class="admin-panel active" id="pinsTab">
+<div class="card"><h2 style="font-size:15px;margin-bottom:12px">➕ 添加医生</h2>
+<div class="admin-input"><input type="text" id="newName" placeholder="name/phone"></div>
+<div style="display:flex;gap:8px;margin-bottom:8px">
+  <button class="btn" onclick="autoGenPIN()" style="flex:1">🎲 自动生成 PIN</button>
+  <button class="btn btn-outline" onclick="showManualPIN()" style="flex:1">✏️ 手动指定</button>
+</div>
+<div id="manualPinSection" style="display:none;margin-bottom:8px">
+  <div class="admin-input"><input type="text" id="newPin" placeholder="name/phone" maxlength="4" inputmode="numeric"></div>
+</div>
+<div class="admin-input"><select id="newRole"><option value="doctor">医生</option><option value="admin">管理员</option></select><button class="btn" onclick="addPIN()" style="flex:1">添加</button></div>
+<div id="addResult"></div></div>
+<div class="card"><h2 style="font-size:15px;margin-bottom:12px">👥 医生列表</h2><div id="pinList"></div></div>
+</div>
+<!-- Tab: All Reports -->
+<div class="admin-panel" id="reportTab">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h2 style="font-size:15px">📊 所有患者量表</h2>
+<div id="deleteActions" style="display:none;gap:6px">
+<button class="btn btn-sm btn-danger" onclick="bulkDeleteSelected()">删除选中</button>
+<button class="btn btn-sm btn-outline" onclick="exitSelectMode()">取消</button>
+</div>
+<button class="btn btn-sm btn-outline" id="selectBtn" onclick="enterSelectMode()">多选</button>
+</div>
+<div id="reportList"><div class="empty">加载中...</div></div>
+</div>
+<!-- Tab: Change Password -->
+<div class="admin-panel" id="pwdTab">
+<div class="card">
+<h2 style="font-size:15px;margin-bottom:16px">🔑 修改管理员密码</h2>
+<div class="admin-input"><input type="text" id="oldPwd" placeholder="name/phone" maxlength="6" inputmode="numeric"></div>
+<div class="admin-input"><input type="text" id="newPwd" placeholder="name/phone" maxlength="6" inputmode="numeric"></div>
+<div class="admin-input"><input type="text" id="newPwd2" placeholder="name/phone" maxlength="6" inputmode="numeric"></div>
+<div class="admin-input"><button class="btn" onclick="changePassword()" style="flex:1">确认修改</button></div>
+<div id="pwdResult"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- QR Modal (session creation) -->
+<div class="modal-overlay" id="qrModal" onclick="if(event.target===this)closeQR()">
+<div class="modal-content" style="position:relative">
+<button class="modal-close" onclick="closeQR()">✕</button>
+<div class="modal-title">患者评估二维码</div>
+<div id="qrBody" class="qr-display"></div>
+</div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeDetail()">
+<div class="modal-content" style="position:relative">
+<button class="modal-close" onclick="closeDetail()">✕</button>
+<div class="modal-title" id="detailTitle"></div>
+<div id="detailBody"></div>
+</div>
+</div>
+
+<!-- Assign Modal -->
+<div class="modal-overlay" id="assignModal" onclick="if(event.target===this)closeAssign()">
+<div class="modal-content" style="position:relative">
+<button class="modal-close" onclick="closeAssign()">✕</button>
+<div class="modal-title">指派患者补答</div>
+<div id="assignBody"></div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+const API = window.location.origin;
+let selectedRole = null, currentRole = null, currentPin = null, currentDoctorName = '';
+let currentSessionId = '', currentPatientId = '';
+let selectMode = false, selectedSessions = new Set();
+
+// Admin API helper — auto-adds X-Admin-Pin header
+function adminFetch(path, opts = {}) {
+  opts.headers = opts.headers || {};
+  opts.headers['X-Admin-Pin'] = currentPin;
+  return fetch(API + path, opts);
+}
+
+const SCALE_INFO = {
+  phq9: { label: 'PHQ-9', full: '抑郁症状评估', max: 27 },
+  gad7: { label: 'GAD-7', full: '焦虑症状评估', max: 21 },
+  cssrs: { label: 'C-SSRS', full: '自杀风险筛查' },
+  screening: { label: '筛查', full: '撤药反应筛查', max: 30 },
+  dess: { label: 'DESS', full: '抗抑郁药撤药量表', max: 43 },
+  ciwa_b: { label: 'CIWA-B', full: '苯二氮䓬戒断（CIWA-B）量表', max: 80 },
+  wess_eps_td: { label: 'WESS', full: '抗精神病药撤药 + 运动症状', max: 36 },
+  ymrs: { label: 'YMRS+MADRS', full: '心境稳定剂复发预警', max: 60 },
+};
+
+const SCALE_QUESTIONS = {
+  phq9: ['做事提不起劲或没有兴趣','感到心情低落、沮丧或绝望','入睡困难、睡眠不稳或睡得太多','感觉疲倦或没有活力','食欲不振或吃太多','觉得自己很糟糕或很失败','对事物专注有困难','动作缓慢或烦躁不安','有不如死掉或伤害自己的念头'],
+  gad7: ['感觉紧张、焦虑或急切','不能停止或控制担忧','对各种各样的事情担忧过多','很难放松下来','由于坐立不安很难静坐','变得容易烦恼或急躁','感到好像将有可怕的事情发生'],
+  cssrs: ['你是否曾希望自己可以死去或不再存在？','你是否有过任何伤害自己的想法？','你有没有想过具体的自杀方法？','你有没有想过要真正去做（有自杀意愿）？','你有没有想过具体的自杀方法，并且也打算真正去做？'],
+  screening: ['头晕/眩晕','头痛','"脑电击感"（像过电一样）','恶心/呕吐/腹泻','入睡困难/半夜醒来','焦虑/紧张/坐不住','情绪低落/哭泣','注意力不集中','手抖/出汗/心慌','肌肉酸痛/流感样不适'],
+  dess: ['头晕/眩晕','头痛','"脑电击感"（像过电一样）','恶心/呕吐/腹泻','入睡困难/半夜醒来','焦虑/紧张/坐不住','情绪低落/哭泣','注意力不集中','手抖/出汗/心慌','肌肉酸痛/流感样不适','疲劳/乏力','食欲改变','易怒/情绪波动','感觉异常（皮肤刺痛等）','平衡感差/走路不稳'],
+  ciwa_b: ['恶心/呕吐','震颤（双手伸直观察）','阵发性出汗','焦虑/紧张','激越/不安','听觉/视觉/触觉干扰（幻觉样）','头痛','定向力/意识模糊','意识水平（嗜睡/昏迷）','坐立不安/全身紧张'],
+  wess_eps_td: ['失眠','焦虑/紧张','情绪低落/抑郁','激越/烦躁','精神病性症状复发（幻觉/妄想样）','食欲改变','疲劳/乏力','头痛/肌肉痛','肌张力异常（肌肉僵硬/痉挛）','震颤','静坐不能（无法安静坐着）','不自主运动（口面部/四肢）'],
+  ymrs: ['情绪异常高涨/兴奋','睡眠节律破坏（比平时睡得少但不觉得累）','易怒/攻击性增加','语速加快/话多','情绪低落/悲伤','兴趣/动力减退','睡眠障碍（早醒/失眠）','悲观/绝望感'],
+};
+
+// ── Role / PIN ──
+function selectRole(role) {
+  // If switching role, clear old auth
+  if (selectedRole && selectedRole !== role) {
+    localStorage.removeItem('tdm_auth');
+    localStorage.removeItem('tdm_role');
+  }
+  selectedRole = role;
+  document.getElementById('roleDoctor').classList.toggle('selected', role === 'doctor');
+  document.getElementById('roleAdmin').classList.toggle('selected', role === 'admin');
+  document.getElementById('roleBtn').classList.add('active');
+}
+function goToPIN() {
+  if (!selectedRole) return;
+  currentRole = selectedRole;
+  document.getElementById('roleView').classList.remove('active');
+  document.getElementById('pinView').classList.add('active');
+  document.getElementById('pinRole').textContent = currentRole === 'doctor' ? '医生端' : '管理后台';
+  const isPin6 = currentRole === 'admin';
+  document.getElementById('pinSub').textContent = isPin6 ? '6 位数字密码' : '4 位数字 PIN 码';
+  document.getElementById('pinHelp').textContent = isPin6 ? '管理员默认密码: 888888' : '医生默认 PIN: 7655';
+
+  // Build input boxes
+  const container = document.getElementById('pinInputs');
+  const count = isPin6 ? 6 : 4;
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const inp = document.createElement('input');
+    inp.className = 'pin-digit';
+    inp.maxLength = 1;
+    inp.inputMode = 'numeric';
+    inp.pattern = '[0-9]';
+    if (i === 0) inp.autofocus = true;
+    container.appendChild(inp);
+  }
+  container.children[0].focus();
+  // Setup digit event listeners
+  const digits = container.querySelectorAll('.pin-digit');
+  digits.forEach((d, i) => {
+    d.addEventListener('input', () => { if (d.value && i < digits.length - 1) digits[i + 1].focus(); d.classList.toggle('filled', !!d.value); });
+    d.addEventListener('keydown', e => { if (e.key === 'Backspace' && !d.value && i > 0) { digits[i - 1].focus(); digits[i - 1].value = ''; } if (e.key === 'Enter') checkPIN(); });
+  });
+}
+function backToRole() {
+  document.getElementById('pinView').classList.remove('active');
+  document.getElementById('roleView').classList.add('active');
+  document.getElementById('pinError').textContent = '';
+  document.querySelectorAll('.pin-digit').forEach(d => { d.value = ''; d.classList.remove('filled','error'); });
+}
+
+
+function checkPIN() {
+  const pin = Array.from(document.querySelectorAll('.pin-digit')).map(d => d.value).join('');
+  const minLen = currentRole === 'admin' ? 6 : 4;
+  if (pin.length < minLen) { document.getElementById('pinError').textContent = `请输入 ${minLen} 位数字`; return; }
+  fetch(API + '/api/admin/validate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ session_id: pin }) })
+    .then(r => r.json()).then(d => {
+      if (d.valid) {
+        if (currentRole === 'admin' && d.role !== 'admin') {
+          document.getElementById('pinError').textContent = '此 PIN 不是管理员账号';
+          document.querySelectorAll('.pin-digit').forEach(d => { d.classList.add('error'); setTimeout(() => d.classList.remove('error'), 500); });
+          return;
+        }
+        currentPin = pin;
+        currentDoctorName = d.name || '';
+        document.getElementById('pinView').classList.remove('active');
+        if (currentRole === 'admin') { document.getElementById('adminView').style.display = 'block'; loadPINs(); loadAllReports(); }
+        else { document.getElementById('doctorView').style.display = 'block'; loadPatients(); document.getElementById('doctorHeaderTitle').textContent = '🔬 ' + (currentDoctorName || '医生端'); loadPatients(); }
+        localStorage.setItem('tdm_auth', pin);
+        localStorage.setItem('tdm_role', currentRole);
+      } else {
+        document.getElementById('pinError').textContent = 'PIN 码错误';
+        document.querySelectorAll('.pin-digit').forEach(d => { d.classList.add('error'); setTimeout(() => d.classList.remove('error'), 500); });
+      }
+    });
+}
+
+function logout() { localStorage.removeItem('tdm_auth'); localStorage.removeItem('tdm_role'); location.reload(); }
+
+const savedAuth = localStorage.getItem('tdm_auth');
+const savedRole = localStorage.getItem('tdm_role');
+// Check URL role param
+const urlRole = new URLSearchParams(window.location.search).get('role');
+if (urlRole === 'admin') selectedRole = 'admin';
+else if (urlRole === 'doctor') selectedRole = 'doctor';
+
+if (savedAuth && savedRole) {
+  // 有缓存 → 直接自动登录，忽略 URL 角色
+  fetch(API + '/api/admin/validate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ session_id: savedAuth }) })
+    .then(r => r.json()).then(d => {
+      if (d.valid) {
+        currentPin = savedAuth;
+        currentRole = savedRole;
+        currentDoctorName = d.name || '';
+        document.getElementById('roleView').classList.remove('active');
+        if (currentRole === 'admin') {
+          document.getElementById('adminView').style.display = 'block';
+          loadPINs();
+          loadAllReports();
+        } else {
+          document.getElementById('doctorView').style.display = 'block'; loadPatients();
+          document.getElementById('doctorHeaderTitle').textContent = '🔬 ' + (currentDoctorName || '医生端');
+          loadPatients();
+        }
+      } else {
+        localStorage.removeItem('tdm_auth');
+        localStorage.removeItem('tdm_role');
+      }
+    }).catch(() => {
+      localStorage.removeItem('tdm_auth');
+      localStorage.removeItem('tdm_role');
+    });
+} else if (urlRole) {
+  // 无缓存 + URL 有角色 → 记住角色，跳到 PIN 输入
+  selectedRole = urlRole;
+  setTimeout(() => goToPIN(), 300);
+}
+
+function showView(id) {
+  document.querySelectorAll('#doctorView .view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Create Session + QR ──
+function showCreateSession() {
+  document.getElementById('qrBody').innerHTML = `
+    <div style="margin-bottom:12px">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">患者ID</label>
+      <input type="text" id="qrPatientId" placeholder="name/phone" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">患者手机号</label>
+      <input type="tel" id="qrPatientPhone" placeholder="name/phone" inputmode="numeric" pattern="[0-9]*" maxlength="11" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none">
+    </div>
+    <p style="font-size:12px;color:var(--sec);margin-bottom:12px">创建后患者扫码即可入组评估</p>
+    <button class="btn" onclick="doCreateSession()" style="width:100%">生成二维码</button>`;
+  document.getElementById('qrModal').classList.add('active');
+}
+
+function doCreateSession() {
+  const pid = document.getElementById('qrPatientId').value.trim() || '患者-' + Date.now();
+  const phone = document.getElementById('qrPatientPhone').value.trim();
+  fetch(API + `/api/session/create?patient_id=${encodeURIComponent(pid)}${phone ? '&phone=' + encodeURIComponent(phone) : ''}&doctor_pin=${currentPin}`, { method: 'POST' })
+    .then(r => r.json()).then(d => {
+      const url = API + '/?code=' + d.access_code;
+      document.getElementById('qrBody').innerHTML = `
+        <div class="qr-code-text">${d.access_code}</div>
+        <p style="font-size:13px;color:var(--sec);margin:8px 0">请让患者扫描下方二维码入组</p>
+        <div id="qrImg" style="display:inline-block"></div>
+        <div class="qr-url">${url}</div>
+        <p style="font-size:12px;color:var(--sec);margin-top:12px">建议截图打印贴在诊室</p>`;
+      // Generate QR
+      setTimeout(() => {
+        const qrEl = document.getElementById('qrImg');
+        qrEl.innerHTML = '';
+        new QRCode(qrEl, { text: url, width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+      }, 100);
+      
+      // Start polling for patient completion
+      startPolling(d.session_id);
+    });
+}
+
+let pollTimer = null;
+
+function startPolling(sessionId) {
+  if (pollTimer) clearInterval(pollTimer);
+  const pollDiv = document.createElement('div');
+  pollDiv.id = 'pollStatus';
+  pollDiv.style.cssText = 'margin-top:16px;color:var(--sec);font-size:13px';
+  pollDiv.textContent = '等待患者扫码答题...';
+  document.getElementById('qrBody').appendChild(pollDiv);
+  
+  pollTimer = setInterval(() => {
+    fetch(API + '/api/scale/results/' + sessionId)
+      .then(r => r.json())
+      .then(d => {
+        const completed = (d.scales || []).filter(s => s.status === 'completed').length;
+        const total = (d.scales || []).length;
+        if (completed > 0 && pollDiv) {
+          pollDiv.textContent = `患者已答题 ${completed}/${total}`;
+          pollDiv.style.color = 'var(--green)';
+        }
+        if (completed === total && total > 0) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          if (pollDiv) pollDiv.textContent = '✅ 患者已完成！';
+          setTimeout(() => { closeQR(); loadPatients(); }, 1500);
+        }
+      })
+      .catch(() => {});
+  }, 3000);
+}
+
+function closeQR() { 
+  document.getElementById('qrModal').classList.remove('active'); 
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  refreshPatientList(); 
+}
+
+// ── Doctor: Patient list ──
+function refreshPatientList() {
+  const pid = document.getElementById('patientId')?.value?.trim();
+  if (pid) loadPatients();
+}
+
+
+
+function loadPatients() {
+  console.log('loadPatients called, pin=' + currentPin);
+  const pid = document.getElementById('patientId').value.trim();
+  if (!pid) {
+    // Doctor loads own patients
+    fetch(API + '/api/doctor/report?v=3', {
+      headers: { 'X-Doctor-Pin': currentPin }
+    })
+      .then(r => r.json()).then(d => {
+        console.log('API response:', d);
+        const patients = {};
+        (d.assessments || []).forEach(a => {
+          if (!patients[a.patient_id]) patients[a.patient_id] = [];
+          patients[a.patient_id].push(a);
+        });
+        console.log('Patients:', patients);
+        renderPatientList(patients);
+      }).catch(e => {
+        console.error('Load failed:', e);
+        document.getElementById('patientList').innerHTML = '<div class="empty">加载失败: ' + e.message + '</div>';
+      });
+    return;
+  }
+  currentPatientId = pid;
+  fetch(API + `/api/patient/history/${encodeURIComponent(pid)}?doctor_pin=${currentPin}`)
+    .then(r => r.json()).then(d => {
+      const patients = {};
+      d.assessments.forEach(a => { patients[pid] = d.assessments; });
+      renderPatientList(patients);
+    });
+}
+
+function renderPatientList(patients) {
+  const keys = Object.keys(patients);
+  if (!keys.length) {
+    document.getElementById('patientList').innerHTML = '<div class="empty">加载中...</div>';
+    return;
+  }
+  let html = '';
+  keys.forEach(pid => {
+    const asmts = patients[pid];
+    const latest = asmts[0];
+    const dec = (latest.overall_decision || '评估中').toLowerCase().replace(/ /g, '_');
+    const phone = latest.phone || '-';
+    const doctorName = latest.doctor_pin || '-';
+    html += `<div class="hist-item h-${dec}" onclick="showScaleCards('${latest.session_id}','${pid}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:16px;font-weight:700">${pid}</div>
+          <div style="font-size:12px;color:var(--sec)"> ${phone} · 👤 医生: ${doctorName}</div>
+        </div>
+        <span class="decision-badge dec-${dec}">${latest.overall_decision || '评估中'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--sec);margin-top:6px">${latest.created_at?.substring(0,16) || ''} ${latest.cssrs_override ? '· C-SSRS阳性' : ''} · ${asmts.length}次评估</div>
+    </div>`;
+  });
+  document.getElementById('patientList').innerHTML = html;
+}
+
+function showScaleCards(sessionId, patientId) {
+  currentSessionId = sessionId;
+  currentPatientId = patientId;
+  showView('scaleView');
+  fetch(API + '/api/decision', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id: sessionId}) })
+    .then(r => r.json()).then(d => {
+      document.getElementById('vetoBanner').innerHTML = d.cssrs_override ? '<div class="veto-banner">⛔ C-SSRS 阳性：系统已强制停止减药</div>' : '';
+      document.getElementById('scaleHeader').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:16px;font-weight:700">${patientId}</div><div style="font-size:12px;color:var(--sec)">${d.risk}</div></div>
+        <span class="decision-badge dec-${d.action}">${d.decision}</span></div>`;
+    }).catch(() => { document.getElementById('scaleHeader').innerHTML = `<div style="font-size:16px;font-weight:700">${patientId}</div>`; });
+
+  fetch(API + '/api/scale/results/' + sessionId).then(r => r.json()).then(d => renderScaleCards(d.scales));
+}
+
+function renderScaleCards(scales) {
+  let html = '';
+  scales.forEach(s => {
+    const info = SCALE_INFO[s.scale_name] || { label: s.scale_name, full: s.scale_name };
+    const done = s.status === 'completed';
+    const scoreText = done ? (s.total_score !== null && info.max ? `${s.total_score}/${info.max}` : `${s.total_score ?? '-'}`) : '--';
+    const badge = done ? '<span class="status-badge status-completed">✅ 已答</span>' : '<span class="status-badge status-pending">⏸️ 待补充</span>';
+    const dateStr = s.completed_at ? new Date(s.completed_at+'Z').toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const actions = done ?
+      `<button class="btn-detail" onclick="event.stopPropagation();showDetail('${s.scale_name}')">📝 查看详情</button>` :
+      `<button class="btn-assign" onclick="event.stopPropagation();assignScale('${s.scale_name}')">📤 指派补答</button>`;
+    html += `<div class="scale-card ${done ? '' : 'pending'}" onclick="showDetail('${s.scale_name}')">
+      <div class="scale-card-header"><span class="scale-card-name">${info.label}</span>${badge}</div>
+      <div class="scale-card-score">${scoreText}</div>
+      <div class="scale-card-label">${info.full}${info.max ? ' (' + info.max + '分)' : ''}</div>
+      ${dateStr ? `<div class="scale-card-date">${dateStr}</div>` : ''}
+      <div class="scale-card-actions">${actions}</div>
+    </div>`;
+  });
+  document.getElementById('scaleGrid').innerHTML = html || '<div class="empty">暂无量表数据</div>';
+}
+
+// ── Detail Modal ──
+function showDetail(scaleName) {
+  if (scaleName === 'cssrs') { showCSSRSDetail(); return; }
+  const info = SCALE_INFO[scaleName] || { label: scaleName, full: scaleName };
+  const questions = SCALE_QUESTIONS[scaleName] || [];
+  fetch(API + '/api/scale/results/' + currentSessionId).then(r => r.json()).then(d => {
+    const sd = d.scales.find(s => s.scale_name === scaleName);
+    let body = '';
+    if (sd && sd.raw_answers) {
+      const answers = sd.raw_answers;
+      questions.forEach((q, i) => {
+        const ua = answers[i];
+        let answerText = '';
+        let answerClass = 'detail-q-answer';
+        if (ua === undefined || ua === null) {
+          answerText = '未答';
+          answerClass = 'detail-q-pending';
+        } else if (scaleName === 'cssrs') {
+          answerText = ua ? '是' : '否';
+        } else {
+          const labels = ['无', '轻度', '中度', '重度'];
+          answerText = `${ua} - ${labels[ua] || '?'}`;
+        }
+        body += `<div class="detail-q"><div class="detail-q-label">${i+1}. ${q}</div><div class="${answerClass}">${answerText}</div></div>`;
+      });
+    } else { body = '<div class="empty">该量表尚未完成</div>'; }
+    document.getElementById('detailTitle').textContent = info.full + ' — 答卷详情';
+    document.getElementById('detailBody').innerHTML = body;
+    document.getElementById('detailModal').classList.add('active');
+  }).catch(e => {
+    document.getElementById('detailTitle').textContent = '错误';
+    document.getElementById('detailBody').innerHTML = '<div class="empty">' + e.message + '</div>';
+    document.getElementById('detailModal').classList.add('active');
+  });
+}
+function showCSSRSDetail() {
+  fetch(API + '/api/scale/results/' + currentSessionId).then(r => r.json()).then(d => {
+    const sd = d.scales.find(s => s.scale_name === 'cssrs');
+    let body = '<div class="card"><h3> C-SSRS 筛查 (5题)</h3>';
+    const screeningQs = ['渴望死亡','非特定意念','有方法','有意图','有计划有方法'];
+    if (sd && sd.raw_answers) {
+      sd.raw_answers.forEach((a, i) => {
+        body += `<div class="detail-q"><div class="detail-q-label">${i+1}. ${screeningQs[i]}</div><div class="detail-q-answer">${a?'是':'否'}</div></div>`;
+      });
+    }
+    body += '</div>';
+    // 如果有严重度>0，显示完整信息
+    if (sd && sd.total_score > 0) {
+      body += `<div class="card" style="background:#fee2e2"><h3 style="color:#991b1b"> C-SSRS 阳性 - 严重度: ${sd.total_score}</h3>
+        <p style="font-size:13px;color:#991b1b">系统已强制停止减药</p></div>`;
+    }
+    document.getElementById('detailTitle').textContent = 'C-SSRS 详情';
+    document.getElementById('detailBody').innerHTML = body;
+    document.getElementById('detailModal').classList.add('active');
+  });
+}
+
+function closeDetail() { document.getElementById('detailModal').classList.remove('active'); }
+
+// ── Assign Modal ──
+function assignScale(scaleName) {
+  const info = SCALE_INFO[scaleName] || { label: scaleName };
+  document.getElementById('assignBody').innerHTML = `<p style="margin-bottom:16px">为 <strong>${info.full}</strong> 生成补答码：</p><button class="btn" onclick="doAssign('${scaleName}')" style="width:100%">生成补答码</button><div id="assignResult"></div>`;
+  document.getElementById('assignModal').classList.add('active');
+}
+function doAssign(scaleName) {
+  fetch(API + '/api/scale/assign', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id: currentSessionId, scale_name: scaleName}) })
+    .then(r => r.ok ? r.json() : r.json().then(e => { throw new Error(e.detail || 'Failed'); }))
+    .then(d => {
+      const url = API + '/?code=' + d.temp_code + '&scale=' + scaleName;
+      document.getElementById('assignResult').innerHTML = `<div class="assign-result" style="margin-top:20px"><div style="font-size:13px;color:var(--sec)">补答码</div><div class="assign-code">${d.temp_code}</div><div class="qr-url">${url}</div></div>`;
+      setTimeout(() => showScaleCards(currentSessionId, currentPatientId), 2000);
+    }).catch(e => { document.getElementById('assignResult').innerHTML = `<p style="color:var(--danger);margin-top:12px">❌ ${e.message}</p>`; });
+}
+function closeAssign() { document.getElementById('assignModal').classList.remove('active'); }
+
+// ── Admin: Tabs ──
+function switchAdminTab(tabId) {
+  document.querySelectorAll('.admin-tab').forEach((t, i) => t.classList.toggle('active', t.id?.includes(tabId.split('Tab')[0])));
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  if (tabId === 'reportTab') loadAllReports();
+}
+
+// ── Admin: PINs ──
+function loadPINs() {
+  adminFetch('/api/admin/pins').then(r => r.json()).then(d => {
+    let html = '';
+    d.pins.forEach(p => {
+      html += `<div class="pin-item"><div><div class="pin-code">${p.pin}</div><div class="pin-name">${p.doctor_name} <span class="badge badge-${p.role}">${p.role==='admin'?'管理员':'医生'}</span> <span class="badge ${p.is_active?'badge-active':'badge-inactive'}">${p.is_active?'启用':'禁用'}</span></div><div class="pin-meta">创建于 ${p.created_at?.substring(0,10)||'-'} ${p.last_used?'最后使用: '+p.last_used.substring(0,16):'从未使用'}</div></div>
+        <div style="display:flex;gap:4px"><button class="btn btn-sm ${p.is_active?'btn-danger':''}" onclick="togglePIN('${p.pin}')">${p.is_active?'禁用':'启用'}</button><button class="btn btn-sm btn-danger" onclick="deletePIN('${p.pin}')">删除</button></div></div>`;
+    });
+    document.getElementById('pinList').innerHTML = html || '<div class="empty">无医生</div>';
+  });
+}
+function autoGenPIN() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { document.getElementById('addResult').innerHTML = '<p style="color:var(--danger)">先输入医生姓名</p>'; return; }
+  const role = document.getElementById('newRole').value;
+  adminFetch(`/api/admin/pins/generate?doctor_name=${encodeURIComponent(name)}&role=${role}`, { method: 'POST' })
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }).then(d => {
+      if (d.success) {
+        document.getElementById('addResult').innerHTML = `<p style="color:var(--green)">✅ 已生成并添加 PIN: <strong style="font-family:monospace;font-size:20px">${d.pin}</strong> — 请发给医生 ${name}</p>`;
+        document.getElementById('newPin').value = d.pin;
+        loadPINs();
+      } else {
+        document.getElementById('addResult').innerHTML = `<p style="color:var(--danger)">❌ ${d.error || '生成失败'}</p>`;
+      }
+    }).catch(e => {
+      document.getElementById('addResult').innerHTML = `<p style="color:var(--danger)">❌ 网络错误: ${e.message}。请检查网络连接。</p>`;
+    });
+}
+
+function showManualPIN() {
+  document.getElementById('manualPinSection').style.display = 'block';
+  document.getElementById('newPin').focus();
+}
+
+function addPIN() {
+  const pin = document.getElementById('newPin').value.trim(), name = document.getElementById('newName').value.trim(), role = document.getElementById('newRole').value;
+  if (!name) { document.getElementById('addResult').innerHTML = '<p style="color:var(--danger)">请输入医生姓名</p>'; return; }
+  if (!pin || pin.length !== 4) { document.getElementById('addResult').innerHTML = '<p style="color:var(--danger)">请生成或指定 4 位 PIN</p>'; return; }
+  // Check if PIN was already inserted by auto-gen
+  adminFetch('/api/admin/pins/add', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin, doctor_name:name, role}) })
+    .then(r=>r.json()).then(d => {
+      if(d.success) { document.getElementById('addResult').innerHTML = '<p style="color:var(--green)">✅ 已添加</p>'; document.getElementById('newPin').value=''; document.getElementById('newName').value=''; loadPINs(); }
+      else if(d.already_exists) { document.getElementById('addResult').innerHTML = '<p style="color:var(--sec)">该 PIN 已存在（可能是自动生成的）</p>'; loadPINs(); }
+      else { document.getElementById('addResult').innerHTML = '<p style="color:var(--danger)">❌ ' + d.error + '</p>'; }
+    });
+}
+function deletePIN(pin) { if(!confirm('确定删除 PIN '+pin+'？')) return; adminFetch('/api/admin/pins/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})}).then(()=>loadPINs()); }
+function togglePIN(pin) { adminFetch('/api/admin/pins/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})}).then(()=>loadPINs()); }
+
+// ── Admin: All Reports ──
+function loadAllReports() {
+  fetch(API + '/api/admin/report').then(r => r.json()).then(d => {
+    const asmts = d.assessments || [];
+    if (!asmts.length) { document.getElementById('reportList').innerHTML = '<div class="empty">暂无评估数据</div>'; return; }
+    let html = '';
+    asmts.forEach(a => {
+      const dec = (a.overall_decision || '评估中').toLowerCase().replace(/ /g, '_');
+      html += `<div class="report-item h-${dec}" data-sid="${a.session_id}" onclick="adminViewReport('${a.session_id}')">
+        <input type="checkbox" class="report-check" data-sid="${a.session_id}" onclick="event.stopPropagation();toggleSelect('${a.session_id}')">
+        <div class="report-item-header">
+          <div><strong>${a.patient_id}</strong> <span style="font-size:12px;color:var(--sec)">医生: ${a.doctor_pin || '-'}</span></div>
+          <span class="decision-badge dec-${dec}">${a.overall_decision || '评估中'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--sec)">${a.created_at} · 筛查${a.screening_score ?? '-'} PHQ9 ${a.phq9_score ?? '-'} C-SSRS ${a.cssrs_severity ?? '-'} ${a.cssrs_override ? '⛔' : ''}</div>
+        <div style="font-size:11px;color:var(--sec)">药物: ${a.drug_categories || '无'}</div>
+      </div>`;
+    });
+    document.getElementById('reportList').innerHTML = html;
+  });
+}
+
+function adminViewReport(sid) {
+  adminFetch('/api/admin/report/' + sid).then(r => r.json()).then(d => {
+    const dec = d.decision;
+    let html = `<div class="card"><h3 style="font-size:14px;margin-bottom:8px"> 基本信息</h3>
+      <div style="font-size:13px;line-height:2">患者: <strong>${d.patient_id}</strong><br>📱 ${d.phone || '-'}<br>👤 医生: ${d.doctor_pin || '-'}<br>时间: ${d.created_at}<br>药物: ${d.drug_categories || '无'}</div></div>`;
+    if (dec) {
+      html += `<div class="card"><h3 style="font-size:14px;margin-bottom:8px">📊 决策结果</h3>
+        <div style="font-size:13px;line-height:2">决策: <strong>${dec.overall_decision}</strong><br>风险: ${dec.overall_risk_level}<br>C-SSRS否决: ${dec.cssrs_override ? '是' : '否'}</div></div>`;
+    }
+    // Fetch scale details
+    adminFetch('/api/scale/results/' + sid).then(r2 => r2.json()).then(d2 => {
+      if (d2.scales && d2.scales.length) {
+        d2.scales.forEach(s => {
+          const info = SCALE_INFO[s.scale_name] || { full: s.scale_name };
+          const questions = SCALE_QUESTIONS[s.scale_name] || [];
+          if (s.status === 'completed' && s.raw_answers && questions.length) {
+            html += `<div class="card"><h3 style="font-size:14px;margin-bottom:8px">📝 ${info.full} (${s.total_score ?? '-'}分)</h3>`;
+            questions.forEach((q, i) => {
+              const ua = s.raw_answers[i];
+              let ans = '-';
+              if (s.scale_name === 'cssrs') ans = ua ? '是' : '否';
+              else { const labels = ['无','轻度','中度','重度']; ans = ua !== undefined ? `${ua}-${labels[ua]||'?'}` : '-'; }
+              html += `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+                <div style="font-size:13px;font-weight:600">${i+1}. ${q}</div>
+                <div style="font-size:13px;color:var(--danger);font-weight:600;padding:4px 8px;background:#FEF2F2;border-radius:6px;border-left:3px solid var(--danger);margin-top:4px">${ans}</div>
+              </div>`;
+            });
+            html += `</div>`;
+          }
+        });
+      }
+      html += `<button class="btn btn-danger" onclick="adminDeleteReport('${sid}')" style="width:100%;margin-top:12px">🗑️ 删除此报告</button>`;
+      document.getElementById('detailTitle').textContent = `报告: ${d.patient_id}`;
+      document.getElementById('detailBody').innerHTML = html;
+      document.getElementById('detailModal').classList.add('active');
+    });
+  });
+}
+
+function adminDeleteReport(sid) {
+  if (!confirm('确定删除此报告？不可恢复。')) return;
+  adminFetch('/api/admin/report/' + sid, { method: 'DELETE' }).then(() => {
+    closeDetail();
+    loadAllReports();
+  });
+}
+
+function enterSelectMode() {
+  selectMode = true;
+  selectedSessions.clear();
+  document.getElementById('reportList').classList.add('select-mode');
+  document.getElementById('deleteActions').style.display = 'flex';
+  document.getElementById('selectBtn').style.display = 'none';
+}
+function exitSelectMode() {
+  selectMode = false;
+  selectedSessions.clear();
+  document.getElementById('reportList').classList.remove('select-mode');
+  document.getElementById('deleteActions').style.display = 'none';
+  document.getElementById('selectBtn').style.display = 'block';
+  document.querySelectorAll('.report-check').forEach(c => c.checked = false);
+}
+function toggleSelect(sid) {
+  if (selectedSessions.has(sid)) selectedSessions.delete(sid); else selectedSessions.add(sid);
+}
+function bulkDeleteSelected() {
+  if (!selectedSessions.size) { alert('请先选择要删除的报告'); return; }
+  if (!confirm(`确定删除 ${selectedSessions.size} 份报告？不可恢复。`)) return;
+  fetch(API + '/api/admin/report/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_ids: [...selectedSessions]}) })
+    .then(r => r.json()).then(d => {
+      alert(`已删除 ${d.deleted_count} 份报告`);
+      exitSelectMode();
+      loadAllReports();
+    });
+}
+
+// ── Admin: Change Password ──
+function changePassword() {
+  const oldP = document.getElementById('oldPwd').value.trim();
+  const newP = document.getElementById('newPwd').value.trim();
+  const newP2 = document.getElementById('newPwd2').value.trim();
+  if (!oldP || !newP || newP.length < 6) { document.getElementById('pwdResult').innerHTML = '<p style="color:var(--danger)">密码至少 6 位</p>'; return; }
+  if (newP !== newP2) { document.getElementById('pwdResult').innerHTML = '<p style="color:var(--danger)">两次密码不一致</p>'; return; }
+  adminFetch('/api/admin/pins/set', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({old_pin: oldP, new_pin: newP}) })
+    .then(r => r.json()).then(d => {
+      if (d.success) { document.getElementById('pwdResult').innerHTML = '<p style="color:var(--green)">✅ 密码已修改，请使用新密码重新登录</p>'; setTimeout(logout, 2000); }
+      else { document.getElementById('pwdResult').innerHTML = '<p style="color:var(--danger)">❌ ' + d.error + '</p>'; }
+    });
+}
+</script>
+</body>
+</html>
+
+function searchPatient() {
+  const query = document.getElementById('patientId').value.trim();
+  if (!query) { loadPatients(); return; }
+  document.getElementById('patientList').innerHTML = '<div class="empty">搜索中...</div>';
+  fetch(API + '/api/patient/search', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({query: query, doctor_pin: currentPin})
+  })
+    .then(r => r.json()).then(d => {
+      const patients = {};
+      (d.patients || []).forEach(a => {
+        if (!patients[a.patient_id]) patients[a.patient_id] = [];
+        patients[a.patient_id].push(a);
+      });
+      renderPatientList(patients);
+    }).catch(() => {
+      document.getElementById('patientList').innerHTML = '<div class="empty">搜索失败</div>';
+    });
+}

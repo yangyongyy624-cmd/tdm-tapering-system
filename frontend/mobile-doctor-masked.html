@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 减药决策矩阵</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--primary:#7c3aed;--bg:#f5f3ff;--card:#fff;--border:#e2e8f0;--text:#1e293b;--sec:#64748b;--danger:#ef4444;--success:#22c55e;--radius:16px}
+body{font-family:-apple-system,"PingFang SC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+.header{background:var(--primary);color:#fff;padding:16px 20px;padding-top:max(16px,env(safe-area-inset-top));position:sticky;top:0;z-index:100}
+.header h1{font-size:16px;font-weight:700}
+.view{display:none;padding:16px 20px 100px}
+.view.active{display:block}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h2{font-size:16px;font-weight:600;margin-bottom:12px}
+.patient-item{background:var(--card);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;border-left:3px solid var(--primary)}
+.patient-id{font-size:15px;font-weight:600}
+.patient-phone{font-size:13px;color:var(--sec)}
+.patient-stats{font-size:12px;color:var(--sec);margin-top:4px}
+.empty{text-align:center;padding:40px;color:var(--sec)}
+.masked{color:var(--sec);font-family:monospace}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+.stat-item{text-align:center;padding:12px;background:#f8f9fa;border-radius:12px}
+.stat-value{font-size:20px;font-weight:700;color:var(--primary)}
+.stat-label{font-size:11px;color:var(--sec)}
+</style>
+</head>
+<body>
+<div class="header"><h1>🔬 TDM 减药决策矩阵</h1></div>
+
+<!-- 患者列表 -->
+<div class="view active" id="listView">
+<div class="card">
+<h2>📊 数据概览</h2>
+<div class="stats-grid">
+<div class="stat-item"><div class="stat-value" id="totalPatients">-</div><div class="stat-label">患者总数</div></div>
+<div class="stat-item"><div class="stat-value" id="totalAssessments">-</div><div class="stat-label">评估总数</div></div>
+<div class="stat-item"><div class="stat-value" id="avgScreening">-</div><div class="stat-label">平均筛查分</div></div>
+</div>
+</div>
+<div class="card">
+<h2>👥 患者列表 (脱敏)</h2>
+<div id="patientList"><div class="empty">加载中...</div></div>
+</div>
+</div>
+
+<!-- 患者详情 -->
+<div class="view" id="detailView">
+<button onclick="showList()" style="background:none;border:none;color:var(--primary);font-size:14px;margin-bottom:12px;cursor:pointer">← 返回列表</button>
+<div id="detailContent"></div>
+</div>
+
+<script>
+const API = '';
+
+// 加载统计数据
+function loadStats() {
+  fetch(API + '/api/stats/summary')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('totalPatients').textContent = d.total_patients || 0;
+      document.getElementById('totalAssessments').textContent = d.total_assessments || 0;
+      document.getElementById('avgScreening').textContent = d.average_scores?.screening?.toFixed(1) || '-';
+    });
+}
+
+// 加载患者列表
+function loadPatients() {
+  fetch(API + '/api/patient/list')
+    .then(r => r.json())
+    .then(d => {
+      const patients = d.patients || [];
+      if (!patients.length) {
+        document.getElementById('patientList').innerHTML = '<div class="empty">暂无患者</div>';
+        return;
+      }
+      let html = '';
+      patients.forEach(p => {
+        html += `<div class="patient-item" onclick="showDetail('${p.patient_id}')">
+          <div class="patient-id">患者: ${p.patient_id}</div>
+          <div class="patient-phone masked">手机: ${p.phone_masked || '未提供'}</div>
+          <div class="patient-stats">评估次数: ${p.assessment_count} | 创建: ${p.created_at?.substring(0,10)}</div>
+        </div>`;
+      });
+      document.getElementById('patientList').innerHTML = html;
+    });
+}
+
+// 显示患者详情
+function showDetail(patientId) {
+  document.getElementById('listView').classList.remove('active');
+  document.getElementById('detailView').classList.add('active');
+
+  fetch(API + `/api/patient/${patientId}/summary`)
+    .then(r => r.json())
+    .then(d => {
+      let html = `<div class="card">
+        <h2>患者: ${d.patient_id}</h2>
+        <p style="color:var(--sec);font-size:13px">注：敏感数据需通过本地安全通道查看</p>
+      </div>`;
+
+      if (d.sessions?.length) {
+        html += '<div class="card"><h2>评估记录</h2>';
+        d.sessions.forEach(s => {
+          const scores = d.scores?.[s.session_id] || {};
+          html += `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:600">${s.created_at?.substring(0,10)}</div>
+            <div style="font-size:12px;color:var(--sec)">
+              筛查: ${scores.screening_score ?? '-'} | 
+              PHQ9: ${scores.phq9_score ?? '-'} | 
+              GAD7: ${scores.gad7_score ?? '-'} | 
+              C-SSRS: ${scores.cssrs_severity ?? '-'}
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+      }
+
+      document.getElementById('detailContent').innerHTML = html;
+    });
+}
+
+function showList() {
+  document.getElementById('detailView').classList.remove('active');
+  document.getElementById('listView').classList.add('active');
+}
+
+// 初始化
+loadStats();
+loadPatients();
+</script>
+</body>
+</html>

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TDM 减药评估</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;background:#f5f7fa;color:#1a1a2e;padding:16px;max-width:600px;margin:0 auto}
+h1{font-size:20px;text-align:center;margin:20px 0 8px}
+.subtitle{text-align:center;color:#666;font-size:13px;margin-bottom:24px}
+.section{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.section h2{font-size:16px;color:#0f3460;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e8ecf1}
+.section h3{font-size:15px;color:#0f3460;margin:16px 0 8px}
+.q{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #f0f0f0}
+.q:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.q-label{font-size:14px;font-weight:500;margin-bottom:8px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{flex:1;min-width:60px}
+.opt input{display:none}
+.opt label{display:block;text-align:center;padding:8px 4px;border:2px solid #e0e0e0;border-radius:8px;font-size:12px;cursor:pointer;transition:all .15s}
+.opt input:checked+label{border-color:#0f3460;background:#0f3460;color:#fff}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;margin-top:16px}
+.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.btn-primary:disabled{opacity:.5}
+.progress{height:4px;background:#e0e0e0;border-radius:2px;margin:16px 0}
+.progress-bar{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:2px;transition:width .3s}
+.result{text-align:center;padding:24px}
+.result .icon{font-size:48px;margin-bottom:12px}
+.result .decision{font-size:24px;font-weight:700;margin:8px 0}
+.result .detail{font-size:14px;color:#666;margin:12px 0}
+.green{color:#22c55e}.yellow{color:#f59e0b}.red{color:#ef4444}
+.track{display:flex;justify-content:space-around;margin:16px 0}
+.track-item{text-align:center}
+.track-dot{width:24px;height:24px;border-radius:50%;margin:0 auto 4px}
+.track-dot.g{background:#22c55e}.track-dot.y{background:#f59e0b}.track-dot.r{background:#ef4444}
+.track-label{font-size:11px;color:#666}
+.hidden{display:none}
+input[type=text],input[type=tel]{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;margin-bottom:12px}
+.drug-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.drug-chip{padding:10px 16px;border:2px solid #e0e0e0;border-radius:24px;font-size:14px;cursor:pointer;transition:all .15s;user-select:none}
+.drug-chip.selected{border-color:#667eea;background:#667eea;color:#fff}
+.drug-chip:active{transform:scale(.95)}
+.scale-label{display:inline-block;background:#e8ecf1;color:#0f3460;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:12px}
+.error-msg{background:#fef2f2;color:#991b1b;padding:16px;border-radius:8px;text-align:center;margin:20px 0}
+.version-note{font-size:12px;color:#888;margin-bottom:12px;padding:8px;background:#f8fafc;border-radius:8px}
+</style>
+</head>
+<body>
+<h1>TDM 减药评估</h1>
+<p class="subtitle">请如实填写以下问卷，约需 5-8 分钟</p>
+
+<div id="errorBox" class="error-msg hidden"></div>
+
+<div id="drugStep" class="section hidden">
+<h2>💊 选择您正在减停的药物类别</h2>
+<p style="font-size:12px;color:#888;margin-bottom:10px">可多选，系统将自动推送对应量表：</p>
+<div class="drug-chips" id="drugChips">
+  <div class="drug-chip" data-cat="antidepressant" onclick="toggleChip(this)">抗抑郁药<br><span style="font-size:11px;opacity:.7">SSRI/SNRI</span></div>
+  <div class="drug-chip" data-cat="benzodiazepine" onclick="toggleChip(this)">苯二氮䓬类</div>
+  <div class="drug-chip" data-cat="antipsychotic" onclick="toggleChip(this)">抗精神病药</div>
+  <div class="drug-chip" data-cat="mood_stabilizer" onclick="toggleChip(this)">心境稳定剂<br><span style="font-size:11px;opacity:.7">锂盐/丙戊酸等</span></div>
+  <div class="drug-chip" data-cat="alcohol" onclick="toggleChip(this)">酒精依赖<br><span style="font-size:11px;opacity:.7">戒断评估</span></div>
+  <div class="drug-chip" data-cat="opioid" onclick="toggleChip(this)">阿片类依赖<br><span style="font-size:11px;opacity:.7">戒断评估</span></div>
+</div>
+<button class="btn btn-primary" id="btnDrugNext" onclick="startWithDrugs()">开始评估</button>
+</div>
+
+<div id="step0" class="section">
+<h2>📋 基本信息</h2>
+<input type="text" id="patientId" placeholder="患者ID或手机号">
+
+<h3> 选择您正在减停的药物类别</h3>
+<p style="font-size:12px;color:#888;margin-bottom:10px">可多选，系统将自动推送对应量表：</p>
+<div class="drug-chips" id="drugChips2">
+  <div class="drug-chip" data-cat="antidepressant" onclick="toggleChip2(this)">抗抑郁药<br><span style="font-size:11px;opacity:.7">SSRI/SNRI</span></div>
+  <div class="drug-chip" data-cat="benzodiazepine" onclick="toggleChip2(this)">苯二氮䓬类</div>
+  <div class="drug-chip" data-cat="antipsychotic" onclick="toggleChip2(this)">抗精神病药</div>
+  <div class="drug-chip" data-cat="mood_stabilizer" onclick="toggleChip2(this)">心境稳定剂<br><span style="font-size:11px;opacity:.7">锂盐/丙戊酸等</span></div>
+</div>
+<button class="btn btn-primary" onclick="startAssessment()">开始评估</button>
+</div>
+
+<div id="scaleStep" class="section hidden">
+<div class="progress"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+<h2 id="scaleTitle">--</h2>
+<div class="version-note" id="versionNote"></div>
+<div id="scaleQuestions"></div>
+<div id="onsetQuestion" style="display:none;margin-top:16px;padding:16px;background:#f8fafc;border-radius:12px">
+  <h2 style="font-size:16px;color:#0f3460;margin-bottom:8px">⏰ 这些不适是什么时候开始的？</h2>
+  <p style="font-size:13px;color:#888;margin-bottom:12px">这有助于区分是减药引起的撤药反应，还是原有症状的复燃。</p>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;background:#fff">
+      <input type="radio" name="symptom_onset" value="within_3days" style="width:18px;height:18px">
+      <span>减药后 <b>1-3天内</b>（倾向撤药）</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;background:#fff">
+      <input type="radio" name="symptom_onset" value="within_week" style="width:18px;height:18px">
+      <span>减药后 <b>1周内</b>（倾向撤药）</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;background:#fff">
+      <input type="radio" name="symptom_onset" value="within_2weeks" style="width:18px;height:18px">
+      <span>减药后 <b>1-2周</b>（不确定）</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;background:#fff">
+      <input type="radio" name="symptom_onset" value="after_2weeks" style="width:18px;height:18px">
+      <span>减药后 <b>2周以后</b>（倾向复燃）</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;background:#fff">
+      <input type="radio" name="symptom_onset" value="not_sure" style="width:18px;height:18px">
+      <span><b>不确定</b>（安全优先）</span>
+    </label>
+  </div>
+</div>
+<button class="btn btn-primary" onclick="submitCurrentScale()">下一步</button>
+</div>
+
+<div id="resultStep" class="section hidden">
+<div class="result">
+<div class="icon" id="resultIcon">✅</div>
+<div class="decision" id="resultDecision">--</div>
+<div class="detail" id="resultMessage">--</div>
+<div class="track" id="trackDisplay"></div>
+<div id="resultDetail" style="font-size:12px;color:#888;margin-top:12px"></div>
+</div>
+</div>
+
+<script>
+const API = window.location.origin;
+let sessionId = '', patientId = '', selectedDrugs = [];
+let scaleQueue = [], scaleIndex = 0, currentScaleName = '';
+let singleScaleMode = null;
+
+const urlParams = new URLSearchParams(window.location.search);
+const code = urlParams.get('code');
+const confirmed = urlParams.get('confirmed');
+
+if (code && confirmed) {
+  document.getElementById('step0').classList.add('hidden');
+  document.getElementById('drugStep').classList.remove('hidden');
+}
+
+function toggleChip2(el) {
+  el.classList.toggle('selected');
+  selectedDrugs = Array.from(document.querySelectorAll('#drugChips2 .drug-chip.selected')).map(c => c.dataset.cat);
+}
+
+function toggleChip(el) {
+  el.classList.toggle('selected');
+  selectedDrugs = Array.from(document.querySelectorAll('#drugChips .drug-chip.selected')).map(c => c.dataset.cat);
+}
+
+function showError(msg) {
+  document.getElementById('errorBox').textContent = msg;
+  document.getElementById('errorBox').classList.remove('hidden');
+}
+
+function startWithDrugs() {
+  if (selectedDrugs.length === 0) { alert('请至少选择一种药物类别'); return; }
+  
+  document.getElementById('btnDrugNext').disabled = true;
+  document.getElementById('btnDrugNext').textContent = '加载中...';
+  
+  fetch(API + '/api/code/' + code)
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(d => {
+      if (!d.session_id) throw new Error('无效的评估码');
+      sessionId = d.session_id;
+      return fetch(API + '/api/session/update?session_id=' + sessionId + '&drug_categories=' + JSON.stringify(selectedDrugs), { method: 'POST' });
+    })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(() => fetch(API + '/api/scale/results/' + sessionId))
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(result => {
+      if (!result.scales || result.scales.length === 0) throw new Error('未找到量表列表');
+      scaleQueue = result.scales.map(s => s.scale_name);
+      scaleIndex = 0;
+      document.getElementById('drugStep').classList.add('hidden');
+      showNextScale();
+    })
+    .catch(e => {
+      showError('加载失败: ' + e.message + '，请联系医生重新生成二维码');
+      document.getElementById('btnDrugNext').disabled = false;
+      document.getElementById('btnDrugNext').textContent = '开始评估';
+    });
+}
+
+function startAssessment() {
+  patientId = document.getElementById('patientId').value.trim();
+  if (!patientId) { alert('请输入患者ID'); return; }
+  if (!singleScaleMode && selectedDrugs.length === 0) { alert('请至少选择一种药物类别'); return; }
+
+  const cats = singleScaleMode ? null : JSON.stringify(selectedDrugs);
+  fetch(API + '/api/session/create?patient_id=' + encodeURIComponent(patientId) +
+    (cats ? '&drug_categories=' + encodeURIComponent(cats) : ''))
+    .then(r => r.json())
+    .then(d => {
+      if (!d.session_id) throw new Error('创建失败');
+      sessionId = d.session_id;
+      scaleQueue = singleScaleMode ? [singleScaleMode] : (d.scales || ['phq9','gad7','cssrs']);
+      scaleIndex = 0;
+      showNextScale();
+    })
+    .catch(e => showError('创建失败: ' + e.message));
+}
+
+function showNextScale() {
+  if (scaleIndex >= scaleQueue.length) { showResult(); return; }
+  
+  currentScaleName = scaleQueue[scaleIndex];
+  const scale = SCALES[currentScaleName];
+  
+  if (!scale) { showError('未知量表: ' + currentScaleName); return; }
+  
+  document.getElementById('step0').classList.add('hidden');
+  document.getElementById('drugStep').classList.add('hidden');
+  document.getElementById('scaleStep').classList.remove('hidden');
+  document.getElementById('resultStep').classList.add('hidden');
+  
+  document.getElementById('scaleTitle').innerHTML = scale.label + ' <span class="scale-label">' + (scaleIndex + 1) + '/' + scaleQueue.length + '</span>';
+  
+  const versionNote = document.getElementById('versionNote');
+  if (scale.version) {
+    versionNote.textContent = scale.version;
+    versionNote.style.display = 'block';
+  } else {
+    versionNote.style.display = 'none';
+  }
+  
+  let html = '';
+  scale.questions.forEach((q, i) => {
+    html += '<div class="q"><div class="q-label">' + (i + 1) + '. ' + q + '</div><div class="opts">';
+    var itemOpts = scale.opts;
+    if (scale.max8Items && scale.max8Items.indexOf(i + 1) !== -1) {
+      itemOpts = ['0 无','1','2','3','4 轻度','5','6','7','8 重度'];
+    }
+    if (scale.weightedItems && scale.weightedItems.indexOf(i + 1) !== -1) {
+      itemOpts = scale.weightedOpts || scale.opts;
+    }
+    if (scale.max6Items && scale.max6Items.indexOf(i + 1) !== -1) {
+      itemOpts = ['0 无','1','2','3','4','5','6 重度'];
+    }
+    itemOpts.forEach((opt, j) => {
+      html += '<div class="opt"><input type="radio" name="q' + i + '" id="q' + i + '_' + j + '" value="' + j + '"><label for="q' + i + '_' + j + '">' + opt + '</label></div>';
+    });
+    html += '</div></div>';
+  });
+  document.getElementById('scaleQuestions').innerHTML = html;
+  
+  document.getElementById('progressBar').style.width = ((scaleIndex) / scaleQueue.length) * 100 + '%';
+
+  // 非基线的 PHQ-9/GAD-7 显示症状时间问题
+  var onsetDiv = document.getElementById('onsetQuestion');
+  if (onsetDiv && (currentScaleName === 'phq9' || currentScaleName === 'gad7')) {
+    onsetDiv.style.display = 'block';
+  } else if (onsetDiv) {
+    onsetDiv.style.display = 'none';
+  }
+}
+
+window.getSymptomOnset = function() {
+  var selected = document.querySelector('input[name="symptom_onset"]:checked');
+  return selected ? selected.value : '';
+};
+
+function submitCurrentScale() {
+  const scale = SCALES[currentScaleName];
+  if (!scale) { showError('量表定义缺失'); return; }
+  
+  const answers = [];
+  for (let i = 0; i < scale.questions.length; i++) {
+    const selected = document.querySelector('input[name="q' + i + '"]:checked');
+    if (!selected) { alert('请回答第' + (i + 1) + '题'); return; }
+    answers.push(parseInt(selected.value));
+  }
+  
+  // 根据量表类型选择提交 API
+  let submitUrl, submitData;
+  
+  if (currentScaleName === 'screening') {
+    submitUrl = API + '/api/screening/submit';
+    submitData = { session_id: sessionId, patient_id: patientId, q: answers };
+  } else if (currentScaleName === 'phq9') {
+    submitUrl = API + '/api/phq9/submit';
+    submitData = { session_id: sessionId, p: answers, is_baseline: false, symptom_onset: getSymptomOnset() };
+  } else if (currentScaleName === 'gad7') {
+    submitUrl = API + '/api/gad7/submit';
+    submitData = { session_id: sessionId, g: answers, is_baseline: false, symptom_onset: getSymptomOnset() };
+  } else if (currentScaleName === 'cssrs') {
+    submitUrl = API + '/api/cssrs/submit';
+    submitData = { 
+      session_id: sessionId, 
+      wish_dead: answers[0] || 0,
+      non_specific: answers[1] || 0,
+      with_method: answers[2] || 0,
+      with_intent: answers[3] || 0,
+      with_plan: answers[4] || 0
+    };
+  } else {
+    // 药物特定量表
+    submitUrl = API + '/api/scale/submit';
+    submitData = { session_id: sessionId, scale_name: currentScaleName, answers: answers };
+  }
+  
+  fetch(submitUrl, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(submitData)
+  })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(() => { scaleIndex++; showNextScale(); })
+    .catch(e => alert('提交失败: ' + e.message));
+}
+
+function showResult() {
+  document.getElementById('scaleStep').classList.add('hidden');
+  document.getElementById('resultStep').classList.remove('hidden');
+  
+  fetch(API + '/api/decision', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_id: sessionId})
+  })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(d => {
+      document.getElementById('resultIcon').textContent = d.decision === '继续减药' ? '✅' : d.decision === '减速减药' ? '⚠️' : '';
+      document.getElementById('resultDecision').textContent = d.decision;
+      document.getElementById('resultDecision').className = 'decision ' + (d.risk === '低风险' ? 'green' : d.risk === '轻度风险' ? 'yellow' : 'red');
+      document.getElementById('resultMessage').textContent = d.message_patient;
+      
+      let trackHtml = '';
+      const tracks = d.tracks;
+      trackHtml += '<div class="track-item"><div class="track-dot ' + (tracks.withdrawal === 'green' ? 'g' : tracks.withdrawal === 'yellow' ? 'y' : 'r') + '"></div><div class="track-label">撤药</div></div>';
+      trackHtml += '<div class="track-item"><div class="track-dot ' + (tracks.relapse === 'green' ? 'g' : tracks.relapse === 'yellow' ? 'y' : 'r') + '"></div><div class="track-label">复发</div></div>';
+      trackHtml += '<div class="track-item"><div class="track-dot ' + (tracks.cssrs === 'green' ? 'g' : tracks.cssrs === 'yellow' ? 'y' : 'r') + '"></div><div class="track-label">自杀风险</div></div>';
+      document.getElementById('trackDisplay').innerHTML = trackHtml;
+      document.getElementById('resultDetail').textContent = '筛查分: ' + d.details.screening_total + ' | PHQ-9变化: ' + d.details.phq9_change + ' | GAD-7变化: ' + d.details.gad7_change + ' | C-SSRS: ' + d.details.cssrs_severity;
+    })
+    .catch(() => {
+      document.getElementById('resultDecision').textContent = '评估完成';
+      document.getElementById('resultMessage').textContent = '请稍后查看医生端的决策结果';
+    });
+  
+  // 获取全部量表分数
+  fetch(API + '/api/scale/results/' + sessionId)
+    .then(r => r.json())
+    .then(data => {
+      const scales = data.scales || [];
+      let scoreHtml = '<div style="margin-top:16px;padding:12px;background:#f8fafc;border-radius:8px"><strong>全部量表得分</strong><ul style="margin:8px 0 0 16px;padding:0">';
+      const scaleNames = {
+        screening: '撤药筛查', phq9: 'PHQ-9', gad7: 'GAD-7', cssrs: 'C-SSRS',
+        dess: 'DESS(抗抑郁药)', dawss: 'DAWSS(撤药鉴别)', ciwa_b: 'CIWA-B(苯二氮䓬)',
+        ap_dess: 'DESS撤药', ap_sas: 'SAS锥体外系', ap_bars: 'BARS静坐不能',
+        ciwa_ar: 'CIWA-Ar(酒精戒断)', cows: 'COWS(阿片戒断)', ymrs: 'YMRS(躁狂评定)', madrs: 'MADRS(抑郁评定)'
+      };
+      scales.forEach(s => {
+        const name = scaleNames[s.scale_name] || s.scale_name;
+        const score = s.total_score !== null ? s.total_score + '分' : '未答';
+        const status = s.status === 'completed' ? '✅' : '';
+        scoreHtml += `<li>${status} ${name}: ${score}</li>`;
+      });
+      scoreHtml += '</ul></div>';
+      document.getElementById('resultDetail').innerHTML += scoreHtml;
+    })
+    .catch(() => {});
+}
+
+const SCALES = {
+  screening: {
+    label: '撤药反应筛查',
+    version: 'TDM 自制筛查量表（10题）',
+    questions: ['头晕/眩晕','头痛','"脑电击感"（像过电一样）','恶心/呕吐/腹泻','入睡困难/半夜醒来','焦虑/紧张/坐不住','情绪低落/哭泣','注意力不集中','手抖/出汗/心慌','肌肉酸痛/流感样不适'],
+    opts: ['0 没有','1 有一点','2 中等','3 很严重']
+  },
+  phq9: {
+    label: '抑郁症状评估（PHQ-9）',
+    version: '标准量表（9题）',
+    questions: ['做事提不起劲或没有兴趣','感到心情低落、沮丧或绝望','入睡困难、睡眠不稳或睡得太多','感觉疲倦或没有活力','食欲不振或吃太多','觉得自己很糟糕或很失败','对事物专注有困难','动作缓慢或烦躁不安','有不如死掉或伤害自己的念头'],
+    opts: ['0 完全没有','1 有几天','2 一半以上天数','3 几乎每天']
+  },
+  gad7: {
+    label: '焦虑症状评估（GAD-7）',
+    version: '标准量表（7题）',
+    questions: ['感觉紧张、焦虑或急切','不能停止或控制担忧','对各种各样的事情担忧过多','很难放松下来','由于坐立不安很难静坐','变得容易烦恼或急躁','感到好像将有可怕的事情发生'],
+    opts: ['0 完全没有','1 有几天','2 一半以上天数','3 几乎每天']
+  },
+  cssrs: {
+    label: '自杀风险评估（C-SSRS）',
+    version: '标准量表（5题）',
+    questions: ['你是否曾希望自己可以死去或不再存在？','你是否有过任何伤害自己的想法？','你有没有想过具体的自杀方法？','你有没有想过要真正去做（有自杀意愿）？','你有没有想过具体的自杀方法，并且也打算真正去做？'],
+    opts: ['否','是']
+  },
+  dess: {
+    label: '抗抑郁药撤药量表（DESS）',
+    version: 'Rosenbaum et al. 1998, Biol Psychiatry（43题，症状清单）',
+    questions: ['头晕/头重脚轻','恶心','嗜睡/乏力','头痛','失眠','梦境生动','噩梦','焦虑','易怒','激越/坐立不安','活动量增加','情绪不稳/波动','攻击性/敌意增加','情绪低落','情感平淡','哭泣','注意力不集中','记忆力下降','思维混乱','疲劳','震颤','肌肉抽搐','手抖','协调性下降','出汗','发热感/潮热','发冷','流感样症状','肌肉酸痛','视力模糊','味觉改变','电击感（脑内/身体）','感觉异常（刺痛/麻木）','心悸','胸痛','呼吸急促','喉咙紧缩感','食欲增加','食欲减退','腹泻','呕吐','腹部绞痛','运动迟缓'],
+    opts: ['0 否','1 是']
+  },
+  ciwa_b: {
+    label: '苯二氮䓬戒断量表（CIWA-B）',
+    version: 'Busto et al. 1989, J Clin Psychopharmacol（20题，满分80）',
+    questions: ['坐立不安/激越','焦虑/紧张','震颤（双手伸直观察）','阵发性出汗','头痛','肌肉酸痛/痉挛','恶心/呕吐','食欲减退','感觉异常（皮肤刺痛/麻木）','听觉过敏（对声音敏感）','视觉过敏（对光敏感）','触觉过敏（对触碰敏感）','感知干扰（幻觉样体验）','注意力/集中力困难','记忆力下降','情绪不稳/易怒','失眠/睡眠不安','梦境生动/噩梦','认知混乱/定向力障碍','抑郁情绪'],
+    opts: ['0 无','1 轻度','2 中度','3 偏重','4 重度']
+  },
+  ap_dess: {
+    label: 'DESS 撤药症状（抗精神病药）',
+    version: 'Rosenbaum 1998（8题，≥4项有临床意义）',
+    questions: ['头晕/眩晕','头痛','"脑电击感"（像过电一样）','恶心/呕吐/腹泻','入睡困难/半夜醒来','焦虑/紧张/坐不住','情绪低落/哭泣','注意力不集中'],
+    opts: ['0 否','1 是']
+  },
+  ap_sas: {
+    label: 'SAS 锥体外系症状',
+    version: 'Simpson & Angus 1970（3题，平均分>1有EPS）',
+    questions: ['肌肉僵硬（胳膊弯曲时感觉阻力）','震颤（静止时手抖）','动作迟缓/笨拙'],
+    opts: ['0 无','1 轻度','2 中度','3 重度']
+  },
+  ap_bars: {
+    label: 'BARS 静坐不能评定',
+    version: 'Barnes 1989（2题，总分>3有静坐不能）',
+    questions: ['坐立不安（无法安静坐着）','双腿不自主活动（来回走动/抖腿）'],
+    opts: ['0 无','1 轻度','2 中度','3 重度']
+  },
+  ap_withdrawal: {
+    label: '抗精神病药撤药评估（完整版）',
+    version: 'DESS + SAS + BARS 完整版（26题）',
+    questions: ['头晕/眩晕','头痛','"脑电击感"（像过电一样）','恶心/呕吐/腹泻','入睡困难/半夜醒来','焦虑/紧张/坐不住','情绪低落/哭泣','注意力不集中','手抖/出汗/心慌','肌肉酸痛/流感样不适','疲劳/乏力','食欲改变','易怒/情绪波动','感觉异常（皮肤刺痛等）','平衡感差/走路不稳','肌肉僵硬（胳膊弯曲时感觉阻力）','震颤（静止时手抖）','动作迟缓/笨拙','流口水增多','面部表情减少（面具脸）','步态异常（拖步/小步）','肌肉痉挛/抽搐','坐立不安（无法安静坐着）','双腿不自主活动（来回走动/抖腿）','内心烦躁感（感觉必须动）','因不安导致痛苦/困扰'],
+    opts: ['0 无','1 轻度','2 中度','3 重度']
+  },
+  dawss: {
+    label: 'DAWSS 撤药鉴别量表',
+    version: 'Horowitz et al. 2024（15题，撤药特异性症状）',
+    questions: ['头晕/头重脚轻','"脑电击感"（像电流穿过大脑）','眩晕/天旋地转','恶心/呕吐','视力模糊/视觉干扰','震颤/手抖','心悸/心跳加快','失眠/睡眠维持困难','梦境异常生动/噩梦','流感样症状（发冷、肌肉酸痛、疲劳）','感觉异常（皮肤刺痛、麻木）','电击感/身体电流感','食欲明显改变','腹泻/腹部不适','坐立不安/激越'],
+    opts: ['0 否','1 是']
+  },
+  ciwa_ar: {
+    label: 'CIWA-Ar 酒精戒断量表',
+    version: 'Sullivan et al. 1989, Br J Addict（10题，满分67）',
+    questions: ['恶心/呕吐','震颤（双臂伸直观察）','阵发性出汗','焦虑','激越/不安','触觉异常','听觉异常','视觉异常','头痛/头部胀满感','定向力/意识'],
+    opts: ['0 无','1','2','3','4','5','6','7 严重'],
+    weightedItems: [10],
+    weightedOpts: ['0 正常','1 轻度','2 中度','3 重度','4 昏迷']
+  },
+  cows: {
+    label: 'COWS 阿片戒断量表',
+    version: 'Wesson & Ling 2003, J Psychoactive Drugs（11题，满分48）',
+    questions: ['休息时脉搏频率','出汗','休息时不安','瞳孔大小','骨骼或关节酸痛','流涕或流泪','胃肠道不适','震颤','打哈欠','焦虑或易怒','起鸡皮疙瘩'],
+    opts: ['0 无','1 轻度','2 中度','3 偏重','4 重度'],
+    max6Items: [3, 4]
+  },
+  ymrs: {
+    label: 'YMRS 躁狂评定量表',
+    version: 'Young et al. 1978, Br J Psychiatry（11题，医生评定）',
+    questions: ['情绪高涨/欣快感','活动量增加/精力旺盛','性兴趣/活动增加','睡眠需求减少','易怒/攻击性','言语增多/语速加快','思维奔逸/语言紊乱','夸大观念/自负','破坏性/攻击行为','外表异常（穿着/仪容）','自知力（缺乏对自身状况的认识）'],
+    opts: ['0 无','1','2 轻度','3','4 重度'],
+    max8Items: [5,6,7,9]
+  },
+  madrs: {
+    label: 'MADRS 抑郁评定量表',
+    version: 'Montgomery & Åsberg 1979, Br J Psychiatry（10题，医生评定）',
+    questions: ['表面悲伤（面部表情、姿势、语调）','内心悲伤/情绪低落（患者主观报告）','内心紧张（焦虑、不安、肌肉紧张）','睡眠减少（睡眠时长/深度）','食欲减退','注意力/集中力困难','倦怠/乏力（精力下降、行动迟缓）','情感淡漠/快感缺失（对周围事物失去兴趣）','悲观思维（负面想法、内疚、自责）','自杀意念（死亡想法、自杀念头/行为）'],
+    opts: ['0 正常','1','2 轻度','3','4 中度','5','6 重度']
+  }
+};
+</script>
+</body>
+</html>

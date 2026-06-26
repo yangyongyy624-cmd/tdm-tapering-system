@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 管理后台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#7c3aed;--bg:#f5f7fa;--card:#fff;--border:#e2e8f0;--text:#1a1a2e;--sec:#64748b;--danger:#ef4444;--green:#22c55e;--yellow:#f59e0b}
+body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+.header{background:var(--primary);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.header-title{font-size:18px;font-weight:700}
+.header-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:14px}
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--border)}
+.tab{flex:1;padding:14px;text-align:center;font-size:14px;font-weight:600;color:var(--sec);border-bottom:2px solid transparent;cursor:pointer}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.content{padding:16px 20px}
+.tab-content{display:none}.tab-content.active{display:block}
+.search-row{display:flex;gap:8px;margin-bottom:12px}
+.search-row input{flex:1;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px}
+.search-row button{padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:12px}
+.select-row{display:none;gap:6px;margin-bottom:12px}.select-row.active{display:flex}
+.btn-sm{padding:8px 14px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-sm.primary{background:var(--primary);color:#fff}.btn-sm.danger{background:var(--danger);color:#fff}
+.btn-sm.secondary{background:var(--sec);color:#fff}.btn-sm.outline{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.report-list{display:flex;flex-direction:column;gap:10px}
+.report-item{background:var(--card);border-radius:12px;padding:14px;border-left:3px solid var(--border);cursor:pointer}
+.report-item.continue{border-left-color:var(--green)}.report-item.slow_down{border-left-color:var(--yellow)}
+.report-item.pause,.report-item.reinstate,.report-item.emergency{border-left-color:var(--danger)}
+.report-date{font-size:12px;color:var(--sec)}.report-decision{font-size:14px;font-weight:600;margin:4px 0}.report-scores{font-size:12px;color:var(--sec)}
+.empty{text-align:center;padding:40px;color:var(--sec)}
+.detail-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:none;align-items:flex-end;justify-content:center}
+.detail-modal.active{display:flex}
+.detail-content{background:#fff;border-radius:16px 16px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px 20px 40px}
+.detail-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.detail-close{background:none;border:none;font-size:24px;color:var(--sec);cursor:pointer}
+.score-ref{background:#f0fdf4;border:2px solid var(--green);border-radius:10px;padding:12px;margin-bottom:14px}
+.score-ref-title{font-size:14px;font-weight:700;margin-bottom:8px}
+.score-row{display:flex;padding:4px 8px;border-radius:5px;margin-bottom:2px;font-size:12px}
+.score-row.g{background:#dcfce7;color:#166534}.score-row.y{background:#fef3c7;color:#92400e}.score-row.r{background:#fee2e2;color:#991b1b}
+.score-total{margin-top:8px;padding:8px;border-radius:8px;font-size:15px;font-weight:700;text-align:center}
+.scale-section{margin:14px 0;padding:12px;background:#f8fafc;border-radius:10px}
+.scale-name{font-size:14px;font-weight:600;color:#7c3aed;margin-bottom:10px}
+.question{background:#fff;border-radius:8px;padding:10px;margin-bottom:8px}
+.question-num{font-size:13px;font-weight:600;margin-bottom:6px}
+.options{display:flex;gap:4px;flex-wrap:wrap}
+.opt{padding:4px 8px;border-radius:6px;font-size:12px;border:1.5px solid var(--border);color:var(--sec)}
+.opt.selected{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed;font-weight:600}
+.opt.positive{border-color:#fca5a5;color:#991b1b;background:#fef2f2}
+.opt.positive.selected{border-color:#ef4444;background:#fee2e2;font-weight:700}
+.opt b{font-size:10px;opacity:.6;margin-left:2px}
+.pin-list{display:flex;flex-direction:column;gap:10px}
+.pin-item{background:var(--card);border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center}
+.pin-name{font-size:14px;font-weight:600}.pin-detail{font-size:12px;color:var(--sec);margin-top:2px}
+.pin-actions{display:flex;gap:8px}
+.pin-actions button{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-toggle{background:#f1f5f9;color:var(--text)}.btn-toggle.inactive{background:#fee2e2;color:var(--danger)}
+.btn-delete{background:#fef2f2;color:var(--danger)}
+.add-pin{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.add-pin input{padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px}
+.add-pin-row{display:flex;gap:8px}.add-pin-row input{flex:1}
+.add-pin-row button{padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:12px}
+.pwd-form{display:flex;flex-direction:column;gap:12px;max-width:300px}
+.pwd-form input{padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px}
+.pwd-form button{padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600}
+.result-msg{margin-top:8px;padding:8px 12px;border-radius:8px;font-size:14px}
+.result-msg.success{background:#f0fdf4;color:#166534}.result-msg.error{background:#fef2f2;color:#991b1b}
+</style>
+</head>
+<body>
+<div class="header"><div class="header-title">TDM 管理后台</div><button class="header-btn" onclick="doLogout()">退出</button></div>
+<div class="tabs">
+<div class="tab active" onclick="switchTab('reportTab',this)">患者量表</div>
+<div class="tab" onclick="switchTab('pinsTab',this)">医生管理</div>
+<div class="tab" onclick="switchTab('pwdTab',this)">改密码</div>
+</div>
+<div class="content">
+<div id="reportTab" class="tab-content active">
+<div class="search-row"><input id="searchQ" placeholder="搜索患者ID/姓名/手机"><button onclick="loadReports()">搜索</button></div>
+<div class="select-row" id="selectBar"><button class="btn-sm secondary" onclick="toggleSelect()">多选</button></div>
+<div class="select-row" id="deleteBar"><button class="btn-sm outline" onclick="selectAll()">全选</button><button class="btn-sm danger" id="btnDelete" onclick="deleteSelected()" style="display:none">删除选中</button><button class="btn-sm outline" onclick="cancelSelect()">取消</button></div>
+<div id="reportList" class="report-list"><div class="empty">加载中...</div></div>
+</div>
+<div id="pinsTab" class="tab-content">
+<div class="add-pin"><input id="newPinName" placeholder="医生姓名"><div class="add-pin-row"><input id="newPinManual" placeholder="PIN码(4位,留空自动)" maxLength="4" inputMode="numeric"><button onclick="addDoctor()">添加</button></div><div id="addResult"></div></div>
+<div id="pinList" class="pin-list" style="margin-top:16px"><div class="empty">加载中...</div></div>
+</div>
+<div id="pwdTab" class="tab-content"><div class="pwd-form"><input id="oldPwd" placeholder="原密码"><input id="newPwd" placeholder="新密码"><button onclick="changePassword()">确认修改</button><div id="pwdResult"></div></div></div>
+</div>
+<div class="detail-modal" id="detailModal" onclick="if(event.target===this)closeDetail()"><div class="detail-content"><div class="detail-title"><span id="detailTitle">患者详情</span><button class="detail-close" onclick="closeDetail()">✕</button></div><div id="detailContent"><div class="empty">加载中...</div></div></div></div>
+<script>
+var API=location.origin,ADMIN_PIN='888888',selectMode=false,selectedSessions=new Set();
+function toBeijingTime(s){if(!s)return'-';var d=new Date(s.replace(' ','T')+'+00:00');var bj=d;var p=function(n){return n<10?'0'+n:''+n};return bj.getFullYear()+'-'+p(bj.getMonth()+1)+'-'+p(bj.getDate())+' '+p(bj.getHours())+':'+p(bj.getMinutes())}
+var SD={screening:{l:'撤药筛查',m:30,r:[{a:0,b:6,l:'无/轻度',c:'g'},{a:7,b:12,l:'中度',c:'y'},{a:13,b:18,l:'重度',c:'r'},{a:19,b:30,l:'极重度',c:'r'}],o:['无','轻度','中度','重度'],p:[0,0,1,1]},phq9:{l:'PHQ-9',m:27,r:[{a:0,b:4,l:'无',c:'g'},{a:5,b:9,l:'轻度',c:'g'},{a:10,b:14,l:'中度',c:'y'},{a:15,b:19,l:'中重度',c:'r'},{a:20,b:27,l:'重度',c:'r'}],o:['完全没有','有几天','一半以上','几乎每天'],p:[0,0,1,1]},gad7:{l:'GAD-7',m:21,r:[{a:0,b:4,l:'极小',c:'g'},{a:5,b:9,l:'轻度',c:'g'},{a:10,b:14,l:'中度',c:'y'},{a:15,b:21,l:'重度',c:'r'}],o:['完全没有','有几天','一半以上','几乎每天'],p:[0,0,1,1]},cssrs:{l:'C-SSRS',m:'-',r:[{a:0,b:0,l:'无风险',c:'g'},{a:1,b:1,l:'低风险',c:'y'},{a:2,b:2,l:'中风险',c:'r'},{a:3,b:5,l:'高风险',c:'r'}],o:['否','是'],p:[0,1]},dess:{l:'DESS',m:43,r:[{a:0,b:8,l:'无/轻度',c:'g'},{a:9,b:20,l:'中度',c:'y'},{a:21,b:45,l:'重度',c:'r'}],o:['无','轻度','中度','重度'],p:[0,0,1,1]},ciwa_b:{l:'CIWA-B',m:30,r:[{a:0,b:10,l:'轻度',c:'g'},{a:11,b:20,l:'中度',c:'y'},{a:21,b:30,l:'重度',c:'r'}],o:['无','轻度','中度','重度'],p:[0,0,1,1]},ap_withdrawal_short:{l:'AP撤药',m:15,r:[{a:0,b:3,l:'无/轻度',c:'g'},{a:4,b:7,l:'中度',c:'y'},{a:8,b:15,l:'重度',c:'r'}],o:['无','轻度','中度','重度'],p:[0,0,1,1]},ymrs:{l:'YMRS',m:60,r:[{a:0,b:4,l:'无/轻度',c:'g'},{a:5,b:12,l:'中度',c:'y'},{a:13,b:24,l:'重度',c:'r'}],o:['无','轻度','中度','重度'],p:[0,0,1,1]}};
+function af(p,o){o=o||{};o.headers=o.headers||{};o.headers['X-Admin-Pin']=ADMIN_PIN;return fetch(API+p,o)}
+window.addEventListener('DOMContentLoaded',function(){loadReports();loadPINs()});
+function switchTab(id,el){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});el.classList.add('active');document.getElementById(id).classList.add('active');if(id==='reportTab')loadReports();if(id==='pinsTab')loadPINs()}
+function doLogout(){localStorage.clear();location.replace('/simple-login.html')}
+function loadReports(){var q=(document.getElementById('searchQ')||{}).value||'';af('/api/admin/report?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(d){var list=document.getElementById('reportList');var reps=d.assessments||[];document.getElementById('selectBar').style.display=reps.length>0?'flex':'none';if(!reps.length){list.innerHTML='<div class="empty">暂无评估记录</div>';return}var h='';reps.forEach(function(a){var dec=(a.overall_decision||'评估中').toLowerCase().replace(/ /g,'_');var cls=['continue','slow_down','pause','reinstate','emergency'].indexOf(dec)!==-1?dec:'';var ck=selectedSessions.has(a.session_id)?'checked':'';var cb=selectMode?'<input type="checkbox" style="margin-right:8px;width:18px;height:18px" '+ck+' onclick="event.stopPropagation();toggleSession(\''+a.session_id+'\')">':'';var ca=selectMode?'':' onclick="showDetail(\''+a.session_id+'\',\''+a.patient_id+'\')"';h+='<div class="report-item '+cls+'"'+ca+'>'+cb+'<div class="report-date">'+toBeijingTime(a.created_at)+' · '+(a.name||a.patient_id)+'</div><div class="report-decision">'+(a.overall_decision||'评估中')+' '+(a.cssrs_override?'⛔':'')+'</div><div class="report-scores">筛查'+(a.screening_score??'-')+' PHQ9 '+(a.phq9_score??'-')+' GAD7 '+(a.gad7_score??'-')+' C-SSRS '+(a.cssrs_severity??'-')+'</div></div>'});list.innerHTML=h})}
+function toggleSelect(){selectMode=!selectMode;selectedSessions.clear();document.getElementById('selectBar').innerHTML=selectMode?'<button class="btn-sm secondary" onclick="toggleSelect()">取消</button>':'<button class="btn-sm secondary" onclick="toggleSelect()">多选</button>';document.getElementById('deleteBar').style.display=selectMode?'flex':'none';document.getElementById('btnDelete').style.display='none';loadReports()}
+function toggleSession(s){if(selectedSessions.has(s))selectedSessions.delete(s);else selectedSessions.add(s);document.getElementById('btnDelete').style.display=selectedSessions.size>0?'block':'none'}
+function selectAll(){var ck=document.querySelectorAll('.report-item input[type="checkbox"]');if(selectedSessions.size===ck.length)selectedSessions.clear();else ck.forEach(function(c){var m=c.getAttribute('onclick').match(/'([^']+)'/);if(m)selectedSessions.add(m[1])});document.getElementById('btnDelete').style.display=selectedSessions.size>0?'block':'none';loadReports()}
+function cancelSelect(){selectMode=false;selectedSessions.clear();document.getElementById('selectBar').innerHTML='<button class="btn-sm secondary" onclick="toggleSelect()">多选</button>';document.getElementById('deleteBar').style.display='none';loadReports()}
+function deleteSelected(){if(!selectedSessions.size)return;if(!confirm('确定删除 '+selectedSessions.size+' 个？'))return;var ids=Array.from(selectedSessions);af('/api/admin/report/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_ids:ids})}).then(function(r){return r.json()}).then(function(d){alert('已删除 '+(d.deleted_count||ids.length)+' 个');cancelSelect()})}
+function showDetail(sid,pid){document.getElementById('detailModal').classList.add('active');document.getElementById('detailTitle').textContent='患者: '+pid;document.getElementById('detailContent').innerHTML='<div class="empty">加载中...</div>';af('/api/admin/report/'+sid).then(function(r){return r.json()}).then(function(d){var h='';h+='<div style="margin-bottom:12px;padding:12px;background:#f8fafc;border-radius:8px"><div>患者: '+(d.patient_id||'-')+'</div><div>医生: '+(d.doctor_pin||'-')+'</div><div>时间: '+toBeijingTime(d.created_at)+'</div></div>';if(d.decision){var td=d.decision;var cls=td.overall_decision==='继续减药'?'g':td.overall_decision==='减速减药'?'y':'r';var bg=cls==='g'?'#f0fdf4':cls==='y'?'#fefce8':'#fef2f2';var fg=cls==='g'?'#166534':cls==='y'?'#854d0e':'#991b1b';h+='<div style="margin-bottom:12px;padding:12px;border-radius:8px;background:'+bg+'"><div style="font-weight:700;color:'+fg+'">'+td.overall_decision+'</div></div>'}var keys=['screening','phq9','gad7','cssrs','dess','ciwa_b','ap_withdrawal_short','ymrs','madrs'];if(d.drug_scales){d.drug_scales.forEach(function(ds){d[ds.scale_name]=ds})}keys.forEach(function(n){if(!d[n])return;var s=SD[n];if(!s)return;var sc=d[n].total_score!==undefined?d[n].total_score:d[n].severity_score;h+='<div class="scale-section"><div class="scale-name">'+s.l+(sc!==undefined?' — '+sc+'/'+s.m:'')+'</div><div class="score-ref"><div class="score-ref-title">评分标准</div>';s.r.forEach(function(r){h+='<div class="score-row '+r.c+'"><span style="min-width:45px;font-weight:600">'+r.a+'-'+r.b+'分</span><span>'+r.l+'</span></div>'});if(sc!==undefined&&sc!==null){var c='g';s.r.forEach(function(r){if(sc>=r.a&&sc<=r.b)c=r.c});var b=c==='g'?'#dcfce7':c==='y'?'#fef3c7':'#fee2e2';var f=c==='g'?'#166534':c==='y'?'#92400e':'#991b1b';h+='<div class="score-total" style="background:'+b+';color:'+f+'">得分: '+sc+' / '+s.m+'</div>'}h+='</div>';if(d[n].answers&&d[n].answers.length){d[n].answers.forEach(function(a,i){h+='<div class="question"><div class="question-num">Q'+(i+1)+'. '+a.question+'</div><div class="options">';if(n==='cssrs'){h+='<span class="opt '+(a.answer===0?'selected':'')+'">否 <b>0</b></span><span class="opt positive '+(a.answer===1?'selected':'')+'">是 <b>1</b></span>'}else{s.o.forEach(function(o,j){var ip=s.p[j],is=j===a.answer,cl='opt';if(ip)cl+=' positive';if(is)cl+=' selected';h+='<span class="'+cl+'">'+o+' <b>'+j+'</b></span>'})}h+='</div></div>'})}h+='</div>'});document.getElementById('detailContent').innerHTML=h||'<div class="empty">暂无数据</div>'}).catch(function(){document.getElementById('detailContent').innerHTML='<div class="empty">加载失败</div>'})}
+function closeDetail(){document.getElementById('detailModal').classList.remove('active')}
+function loadPINs(){af('/api/admin/pins').then(function(r){return r.json()}).then(function(d){var list=document.getElementById('pinList');if(!d.pins||!d.pins.length){list.innerHTML='<div class="empty">暂无医生</div>';return}var h='';d.pins.forEach(function(p){if(p.role==='admin')return;h+='<div class="pin-item"><div class="pin-info"><div class="pin-name">'+p.doctor_name+' ('+p.pin+')</div><div class="pin-detail">'+(p.is_active?'✅启用':'禁用')+' · '+ (p.last_used||'-')+'</div></div><div class="pin-actions"><button class="btn-toggle '+(!p.is_active?'inactive':'')+'" onclick="togglePIN(\''+p.pin+'\')">'+(p.is_active?'禁用':'启用')+'</button><button class="btn-delete" onclick="deletePIN(\''+p.pin+'\')">删除</button></div></div>'});list.innerHTML=h})}
+function addDoctor(){var name=document.getElementById('newPinName').value.trim();var pin=document.getElementById('newPinManual').value.trim();var res=document.getElementById('addResult');if(!name){res.innerHTML='<div class="result-msg error">请输入姓名</div>';return}if(pin&&(pin.length!==4||!/^\d+$/.test(pin))){res.innerHTML='<div class="result-msg error">PIN须4位数字</div>';return}if(pin){af('/api/admin/pins/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin,doctor_name:name,role:'doctor'})}).then(function(r){return r.json()}).then(function(d){if(d.success){res.innerHTML='<div class="result-msg success">✅ 已添加: '+name+' ('+pin+')</div>';document.getElementById('newPinName').value='';document.getElementById('newPinManual').value='';loadPINs()}else{res.innerHTML='<div class="result-msg error">❌ '+d.error+'</div>'}})}else{af('/api/admin/pins/generate?doctor_name='+encodeURIComponent(name)+'&role=doctor',{method:'POST'}).then(function(r){return r.json()}).then(function(d){if(d.success){res.innerHTML='<div class="result-msg success">✅ 已生成: '+name+' ('+d.pin+')</div>';document.getElementById('newPinName').value='';loadPINs()}else{res.innerHTML='<div class="result-msg error">❌ 失败</div>'}})}}
+function togglePIN(p){af('/api/admin/pins/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:p})}).then(function(){loadPINs()})}
+function deletePIN(p){if(!confirm('确定删除？'))return;af('/api/admin/pins/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:p})}).then(function(){loadPINs()})}
+function changePassword(){var o=document.getElementById('oldPwd').value;var n=document.getElementById('newPwd').value;if(!o||!n){alert('请填写完整');return}af('/api/admin/pins/set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old_pin:o,new_pin:n})}).then(function(r){return r.json()}).then(function(d){var res=document.getElementById('pwdResult');if(d.success){res.innerHTML='<div class="result-msg success">✅ 已修改</div>'}else{res.innerHTML='<div class="result-msg error">❌ '+d.error+'</div>'}})}
+</script>
+</body>
+</html>

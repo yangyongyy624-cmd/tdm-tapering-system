@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TDM 患者信息确认</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"SF Pro SC","PingFang SC",sans-serif;background:#f5f7fa;color:#1a1a2e;padding:20px;max-width:500px;margin:0 auto}
+.section{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+h2{font-size:18px;margin-bottom:16px;text-align:center}
+.info-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0}
+.info-row:last-child{border-bottom:none}
+.info-label{color:#666;font-size:14px}
+.info-value{font-size:16px;font-weight:600}
+.info-value.editable{color:#7c3aed;border-bottom:2px dashed #7c3aed;padding-bottom:2px;cursor:pointer}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:14px;color:#666;margin-bottom:8px}
+.input-group input{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px}
+.input-group input:focus{border-color:#7c3aed;outline:none}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;margin-top:16px}
+.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.btn-primary:disabled{opacity:.5}
+.btn-secondary{background:#f0f0f0;color:#333}
+.tip{font-size:12px;color:#999;text-align:center;margin-top:12px}
+.error-msg{background:#fef2f2;color:#991b1b;padding:16px;border-radius:8px;text-align:center;margin:20px 0}
+</style>
+</head>
+<body>
+<div class="section">
+<h2>📋 患者信息确认</h2>
+<p style="font-size:14px;color:#666;text-align:center;margin-bottom:16px">请确认以下信息是否正确，如有错误请点击修改</p>
+<div class="info-row">
+<span class="info-label">患者ID</span>
+<span class="info-value" id="displayPatientId">--</span>
+</div>
+<div class="info-row">
+<span class="info-label">姓名</span>
+<span class="info-value editable" id="displayName" onclick="startEdit('name')">--</span>
+</div>
+<div class="info-row">
+<span class="info-label">手机号</span>
+<span class="info-value editable" id="displayPhone" onclick="startEdit('phone')">--</span>
+</div>
+</div>
+<!-- 编辑表单 -->
+<div class="section" id="editSection" style="display:none">
+<h2>️ 修改信息</h2>
+<div class="input-group">
+<label>姓名</label>
+<input type="text" id="editName" placeholder="请输入姓名">
+</div>
+<div class="input-group">
+<label>手机号</label>
+<input type="tel" id="editPhone" placeholder="请输入手机号" maxlength="11">
+</div>
+<button class="btn btn-primary" onclick="saveInfo()">确认修改</button>
+<button class="btn btn-secondary" onclick="cancelEdit()">取消</button>
+</div>
+<div class="section" id="actionSection">
+<button class="btn btn-primary" id="btnConfirm" onclick="confirmAndContinue()">✅ 信息正确，开始评估</button>
+<div class="tip">信息确认后无法修改，请仔细核对</div>
+</div>
+<script>
+const API = window.location.origin;
+const urlParams = new URLSearchParams(window.location.search);
+const code = urlParams.get('code');
+let patientData = { patientId: '', name: '', phone: '' };
+
+// 页面加载时获取患者信息
+window.addEventListener('DOMContentLoaded', function() {
+  if (!code) {
+    document.body.innerHTML = '<div class="section"><h2>⚠️ 无效的评估码</h2><p style="color:#666;text-align:center">请通过医生分享的二维码进入</p></div>';
+    return;
+  }
+  loadPatientInfo();
+});
+
+function loadPatientInfo() {
+  fetch(API + '/api/code/' + code)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      if (!d.session_id) throw new Error('无效的评估码');
+      patientData.sessionId = d.session_id;
+      patientData.patientId = d.patient_id || '';
+      patientData.name = '';
+      patientData.phone = '';
+      displayInfo();
+    })
+    .catch(function(e) {
+      document.body.innerHTML = '<div class="error-msg">⚠️ ' + e.message + '</div><p style="color:#666;text-align:center">请联系医生重新生成二维码</p>';
+    });
+}
+
+function displayInfo() {
+  document.getElementById('displayPatientId').textContent = patientData.patientId || '--';
+  document.getElementById('displayName').textContent = patientData.name || '未填写';
+  document.getElementById('displayPhone').textContent = patientData.phone || '未填写';
+}
+
+function startEdit(field) {
+  document.getElementById('editSection').style.display = 'block';
+  document.getElementById('actionSection').style.display = 'none';
+  document.getElementById('editName').value = patientData.name || '';
+  document.getElementById('editPhone').value = patientData.phone || '';
+  if (field === 'name') {
+    document.getElementById('editName').focus();
+  } else {
+    document.getElementById('editPhone').focus();
+  }
+}
+
+function cancelEdit() {
+  document.getElementById('editSection').style.display = 'none';
+  document.getElementById('actionSection').style.display = 'block';
+}
+
+function saveInfo() {
+  var name = document.getElementById('editName').value.trim();
+  var phone = document.getElementById('editPhone').value.trim();
+  
+  if (!name) {
+    alert('请输入姓名');
+    return;
+  }
+  
+  fetch(API + '/api/patient/update?patient_id=' + encodeURIComponent(patientData.patientId) + 
+        '&name=' + encodeURIComponent(name) + 
+        '&phone=' + encodeURIComponent(phone), {
+    method: 'POST'
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      if (d.success) {
+        patientData.name = name;
+        patientData.phone = phone;
+        displayInfo();
+        cancelEdit();
+        alert('信息已更新');
+      }
+    })
+    .catch(function(e) {
+      alert('更新失败: ' + e.message);
+    });
+}
+
+function confirmAndContinue() {
+  // 跳转到量表填写页面
+  window.location.href = '/patient-v4.html?code=' + code + '&confirmed=1';
+}
+</script>
+</body>
+</html>

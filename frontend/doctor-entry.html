@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 医生登录</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--primary:#7c3aed;--bg:#f5f7fa;--card:#fff;--border:#e2e8f0;--text:#1a1a2e;--sec:#64748b;--danger:#ef4444}
+body{font-family:-apple-system,"SF Pro SC","PingFang SC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+.pin-view{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:40px 20px;background:var(--bg)}
+.pin-icon{font-size:56px;margin-bottom:16px}
+.pin-role{font-size:14px;color:var(--primary);font-weight:600;margin-bottom:4px}
+.pin-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.pin-sub{font-size:14px;color:var(--sec);margin-bottom:32px;text-align:center}
+.pin-inputs{display:flex;gap:10px;margin-bottom:24px}
+.pin-digit{width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;border:2px solid var(--border);border-radius:12px;background:var(--card);outline:none;font-family:"SF Mono",monospace}
+.pin-digit:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.pin-digit.filled{border-color:var(--primary);background:#f5f3ff}
+.pin-digit.error{border-color:var(--danger);background:#fef2f2;animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pin-error{color:var(--danger);font-size:14px;min-height:20px;margin-bottom:12px;text-align:center}
+.pin-btn{width:100%;max-width:240px;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer}
+.pin-btn:active{background:#6d28d9;transform:scale(.98)}
+.pin-help{font-size:12px;color:var(--sec);margin-top:24px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="pin-view">
+<div class="pin-icon">⚕️</div>
+<div class="pin-role">医生端</div>
+<div class="pin-title">输入 PIN 码</div>
+<div class="pin-sub">4 位数字 PIN 码</div>
+<div class="pin-inputs" id="pinInputs">
+<input class="pin-digit" maxLength="1" inputMode="numeric" pattern="[0-9]" autofocus>
+<input class="pin-digit" maxLength="1" inputMode="numeric" pattern="[0-9]">
+<input class="pin-digit" maxLength="1" inputMode="numeric" pattern="[0-9]">
+<input class="pin-digit" maxLength="1" inputMode="numeric" pattern="[0-9]">
+</div>
+<div class="pin-error" id="pinError"></div>
+<button class="pin-btn" id="pinBtn" onclick="checkPIN()">进入</button>
+<div class="pin-help">医生默认 PIN: 7655</div>
+</div>
+<script>
+const API = window.location.origin;
+let currentPin = '';
+
+// PIN 输入处理
+const digits = document.querySelectorAll('.pin-digit');
+digits.forEach((d, i) => {
+  d.addEventListener('input', () => {
+    if (d.value && i < digits.length - 1) digits[i + 1].focus();
+    d.classList.toggle('filled', !!d.value);
+  });
+  d.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !d.value && i > 0) {
+      digits[i - 1].focus();
+      digits[i - 1].value = '';
+    }
+    if (e.key === 'Enter') checkPIN();
+  });
+});
+
+function checkPIN() {
+  const pin = Array.from(digits).map(d => d.value).join('');
+  if (pin.length < 4) {
+    document.getElementById('pinError').textContent = '请输入 4 位数字';
+    return;
+  }
+  
+  fetch(API + '/api/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({pin})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.valid && d.token) {
+      localStorage.setItem('tdm_auth_token', d.token);
+      localStorage.setItem('tdm_role', 'doctor');
+      localStorage.setItem('tdm_doctor_pin', pin);
+      // 跳转到医生主页（token 放在 URL 里，不依赖 localStorage）
+      window.location.href = '/doctor-home.html';
+    } else {
+      document.getElementById('pinError').textContent = d.error || 'PIN 码错误';
+      digits.forEach(d => {
+        d.classList.add('error');
+        setTimeout(() => d.classList.remove('error'), 500);
+      });
+    }
+  })
+  .catch(e => {
+    document.getElementById('pinError').textContent = '网络错误';
+  });
+}
+
+// 自动聚焦第一个输入框
+window.addEventListener('DOMContentLoaded', () => {
+  digits[0].focus();
+});
+</script>
+</body>
+</html>

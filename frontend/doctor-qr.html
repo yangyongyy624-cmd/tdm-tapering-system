@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TDM 医生入口</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@media print{body{background:#fff}.card{padding:20px;box-shadow:none}.no-print{display:none}}
+body{font-family:-apple-system,"PingFang SC",sans-serif;background:#f0f4f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;padding:40px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.1);text-align:center}
+.logo{width:48px;height:48px;background:#7c3aed;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;margin-bottom:12px}
+h1{font-size:18px;font-weight:600;margin-bottom:4px}
+.sub{font-size:13px;color:#64748b;margin-bottom:24px}
+.qr-frame{width:220px;height:220px;margin:0 auto 20px;border:2px solid #e2e8f0;border-radius:12px;overflow:hidden}
+.qr-frame img{width:100%;height:100%;object-fit:contain}
+.instructions{font-size:13px;color:#475569;line-height:1.6;text-align:left;padding:12px;background:#f8fafc;border-radius:8px}
+.instructions strong{color:#0f172a}
+.url{font-size:11px;color:#94a3b8;font-family:"SF Mono",monospace;margin-top:12px;word-break:break-all}
+.footer{margin-top:16px;font-size:11px;color:#94a3b8}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="logo">T</div>
+<h1>TDM 医生端入口</h1>
+<p class="sub">减药决策矩阵 · 手机扫码进入</p>
+<div class="qr-frame"><img src="doctor-qr.png" alt="医生端二维码"></div>
+<div class="instructions">
+<strong>使用方式：</strong><br>
+1. 用手机浏览器扫上方二维码<br>
+2. 输入 4 位访问码进入系统<br>
+3. 添加到手机桌面，以后直接进入<br>
+<br>
+<em style="color:#94a3b8;">iPhone: Safari → 分享 → 添加到主屏幕<br>
+Android: Chrome → ⋮ → 添加到主屏幕</em>
+</div>
+<div class="url">管理后台: <a href="/admin.html">/admin.html</a></div>
+<div class="footer">TDM Tapering Decision Matrix v2.0</div>
+</div>
+<div class="no-print" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;">
+<button onclick="window.print()" style="padding:10px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">打印此卡片</button>
+<a href="/admin.html" style="padding:10px 24px;background:#f1f5f9;color:#1e293b;border:none;border-radius:8px;font-size:14px;cursor:pointer;text-decoration:none">管理后台</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 量表详情</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#7c3aed;--bg:#f5f7fa;--card:#fff;--border:#e2e8f0;--text:#1a1a2e;--sec:#64748b;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444}
+body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px 20px 100px}
+.header{background:var(--primary);color:#fff;padding:16px 20px;margin:-16px -20px 16px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:18px}
+.back-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:14px}
+.score-ref{background:#f0fdf4;border:2px solid var(--green);border-radius:12px;padding:14px;margin-bottom:16px}
+.score-ref-title{font-size:15px;font-weight:700;margin-bottom:10px}
+.score-row{display:flex;padding:5px 8px;border-radius:6px;margin-bottom:3px;font-size:13px}
+.score-row.g{background:#dcfce7;color:#166534}
+.score-row.y{background:#fef3c7;color:#92400e}
+.score-row.r{background:#fee2e2;color:#991b1b}
+.score-total{margin-top:10px;padding:10px;border-radius:8px;font-size:16px;font-weight:700;text-align:center}
+.question{background:var(--card);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.question-num{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)}
+.options{display:flex;gap:6px;flex-wrap:wrap}
+.opt{padding:6px 12px;border-radius:8px;font-size:13px;border:1.5px solid var(--border);color:var(--sec)}
+.opt.selected{border-color:var(--primary);background:#f5f3ff;color:var(--primary);font-weight:600}
+.opt.positive{border-color:#fca5a5;color:#991b1b;background:#fef2f2}
+.opt.positive.selected{border-color:#ef4444;background:#fee2e2;font-weight:700}
+.opt b{font-size:11px;opacity:.7;margin-left:3px}
+.empty{text-align:center;padding:40px;color:var(--sec)}
+</style>
+</head>
+<body>
+<div class="header">
+  <button class="back-btn" onclick="history.back()">← 返回</button>
+  <h1 id="pageTitle">量表详情</h1>
+  <div style="width:60px"></div>
+</div>
+<div id="content"><div class="empty">加载中...</div></div>
+
+<script>
+const API = window.location.origin;
+const params = new URLSearchParams(window.location.search);
+const sessionId = params.get('session');
+const scaleName = params.get('scale');
+const doctorPin = localStorage.getItem('tdm_pin') || '7655';
+
+const SCALE_NAMES = {
+  screening: '撤药反应筛查', phq9: 'PHQ-9 抑郁', gad7: 'GAD-7 焦虑',
+  cssrs: 'C-SSRS 自杀风险', dess: 'DESS 抗抑郁药撤药',
+  ciwa_ar: 'CIWA-Ar 苯二氮戒断', ap_dess: 'DESS 抗精神病药撤药(8题)', ap_sas: 'SAS 锥体外系(3题)', ap_bars: 'BARS 静坐不能(2题)',
+  ymrs_madrs: 'YMRS+MADRS 心境稳定剂'
+};
+
+const SCALE_DATA = {
+  screening: {
+    questions: ['头晕/眩晕','头痛','脑电击感','恶心/呕吐','入睡困难','焦虑/紧张','情绪低落','注意力不集中','手抖/出汗','肌肉酸痛'],
+    opts: ['无','轻度','中度','重度'], pos: [0,0,1,1], max: 30,
+    ranges: [{min:0,max:6,label:'无/轻度',cls:'g'},{min:7,max:12,label:'中度',cls:'y'},{min:13,max:18,label:'重度',cls:'r'},{min:19,max:30,label:'极重度',cls:'r'}]
+  },
+  phq9: {
+    questions: ['做事提不起劲','心情低落','入睡困难','疲倦没活力','食欲不振','觉得自己失败','专注困难','动作缓慢','自杀念头'],
+    opts: ['完全没有','有几天','一半以上','几乎每天'], pos: [0,0,1,1], max: 27,
+    ranges: [{min:0,max:4,label:'无',cls:'g'},{min:5,max:9,label:'轻度',cls:'g'},{min:10,max:14,label:'中度',cls:'y'},{min:15,max:19,label:'中重度',cls:'r'},{min:20,max:27,label:'重度',cls:'r'}]
+  },
+  gad7: {
+    questions: ['紧张焦虑','不能控制担忧','担忧过多','很难放松','坐立不安','容易烦恼','可怕事发生'],
+    opts: ['完全没有','有几天','一半以上','几乎每天'], pos: [0,0,1,1], max: 21,
+    ranges: [{min:0,max:4,label:'极小',cls:'g'},{min:5,max:9,label:'轻度',cls:'g'},{min:10,max:14,label:'中度',cls:'y'},{min:15,max:21,label:'重度',cls:'r'}]
+  },
+  cssrs: {
+    questions: ['渴望死亡','非特定意念','有方法','有意图','有计划'],
+    opts: ['否','是'], pos: [0,1], max: '-',
+    ranges: [{min:0,max:0,label:'无风险',cls:'g'},{min:1,max:1,label:'低风险',cls:'y'},{min:2,max:2,label:'中风险',cls:'r'},{min:3,max:5,label:'高风险',cls:'r'}]
+  },
+  dess: {
+    questions: [['头晕/头重脚轻','恶心','嗜睡/乏力','头痛','失眠','梦境生动','噩梦','焦虑','易怒','激越/坐立不安','活动量增加','情绪不稳/波动','攻击性/敌意增加','情绪低落','情感平淡','哭泣','注意力不集中','记忆力下降','思维混乱','疲劳','震颤','肌肉抽搐','手抖','协调性下降','出汗','发热感/潮热','发冷','流感样症状','肌肉酸痛','视力模糊','味觉改变','电击感（脑内/身体）','感觉异常（刺痛/麻木）','心悸','胸痛','呼吸急促','喉咙紧缩感','食欲增加','食欲减退','腹泻','呕吐','腹部绞痛','运动迟缓']£,
+    ranges: [{min:0,max:3,label:'无/轻度',cls:'g'},{min:4,max:7,label:'中度',cls:'y'},{min:8,max:15,label:'重度',cls:'r'}]
+  },
+  ymrs_madrs: {
+    questions: ['情绪高涨','睡眠减少','易怒','语速快','情绪低落','兴趣减退','睡眠障碍','悲观'],
+    opts: ['无','轻度','中度','重度'], pos: [0,0,1,1], max: 24,
+    ranges: [{min:0,max:4,label:'无/轻度',cls:'g'},{min:5,max:12,label:'中度',cls:'y'},{min:13,max:24,label:'重度',cls:'r'}]
+  }
+};
+
+// 获取数据
+fetch(API + '/api/doctor/detail/' + sessionId + '?doctor_pin=' + doctorPin)
+  .then(r => r.json())
+  .then(detail => {
+    const sd = SCALE_DATA[scaleName];
+    if (!sd) { document.getElementById('content').innerHTML = '<div class="empty">未知量表</div>'; return; }
+
+    document.getElementById('pageTitle').textContent = sd.questions.length + '题 — ' + (SCALE_NAMES[scaleName] || scaleName);
+
+    // 获取原始答案
+    let rawAnswers = null, totalScore = null;
+    if (detail[scaleName]) {
+      const d = detail[scaleName];
+      totalScore = d.total_score;
+      if (scaleName === 'screening') rawAnswers = [d.q1,d.q2,d.q3,d.q4,d.q5,d.q6,d.q7,d.q8,d.q9,d.q10];
+      else if (scaleName === 'phq9') rawAnswers = [d.p1,d.p2,d.p3,d.p4,d.p5,d.p6,d.p7,d.p8,d.p9];
+      else if (scaleName === 'gad7') rawAnswers = [d.g1,d.g2,d.g3,d.g4,d.g5,d.g6,d.g7];
+      else if (scaleName === 'cssrs') rawAnswers = [d.wish_dead,d.non_specific,d.with_method,d.with_intent,d.with_plan];
+    }
+    if (!rawAnswers && detail.drug_scales) {
+      const ds = detail.drug_scales.find(s => s.scale_name === scaleName);
+      if (ds && ds.raw_answers) {
+        rawAnswers = typeof ds.raw_answers === 'string' ? JSON.parse(ds.raw_answers) : ds.raw_answers;
+        totalScore = ds.total_score;
+      }
+    }
+
+    let html = '';
+
+    // 评分标准
+    html += '<div class="score-ref"><div class="score-ref-title"> 评分标准</div>';
+    sd.ranges.forEach(r => {
+      html += '<div class="score-row ' + r.cls + '"><span style="min-width:50px;font-weight:600">' + r.min + '-' + r.max + '分</span><span>' + r.label + '</span></div>';
+    });
+    if (totalScore !== null && totalScore !== undefined) {
+      let cls = 'g';
+      sd.ranges.forEach(r => { if (totalScore >= r.min && totalScore <= r.max) cls = r.cls; });
+      html += '<div class="score-total" style="background:' + (cls==='g'?'#dcfce7':cls==='y'?'#fef3c7':'#fee2e2') + ';color:' + (cls==='g'?'#166534':cls==='y'?'#92400e':'#991b1b') + '">患者得分: ' + totalScore + ' / ' + sd.max + '</div>';
+    }
+    html += '</div>';
+
+    // 题目
+    if (rawAnswers) {
+      sd.questions.forEach((q, i) => {
+        const ua = rawAnswers[i];
+        const isCssrs = scaleName === 'cssrs';
+        html += '<div class="question">';
+        html += '<div class="question-num">Q' + (i+1) + '. ' + q + '</div>';
+        html += '<div class="options">';
+        if (isCssrs) {
+          html += '<span class="opt ' + (ua===0?'selected':'') + '">否 <b>0</b></span>';
+          html += '<span class="opt positive ' + (ua===1?'selected':'') + '">是 <b>1</b></span>';
+        } else {
+          sd.opts.forEach((opt, j) => {
+            const isPos = sd.pos[j];
+            const isSel = j === ua;
+            let cls = 'opt';
+            if (isPos) cls += ' positive';
+            if (isSel) cls += ' selected';
+            html += '<span class="' + cls + '">' + opt + ' <b>' + j + '</b></span>';
+          });
+        }
+        html += '</div></div>';
+      });
+    } else {
+      html += '<div class="empty">该量表尚未完成</div>';
+    }
+
+    document.getElementById('content').innerHTML = html;
+  })
+  .catch(e => {
+    document.getElementById('content').innerHTML = '<div class="empty">加载失败: ' + e.message + '</div>';
+  });
+</script>
+</body>
+</html>

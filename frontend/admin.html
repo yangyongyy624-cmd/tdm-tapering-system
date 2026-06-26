@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 管理后台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--primary:#7c3aed;--bg:#f5f3ff;--card:#fff;--border:#e5e7eb;--text:#1e293b;--sec:#64748b;--danger:#ef4444;--success:#22c55e;--radius:16px}
+body{font-family:-apple-system,"PingFang SC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+.header{background:var(--primary);color:#fff;padding:16px 20px;padding-top:max(16px,env(safe-area-inset-top));position:sticky;top:0;z-index:100}
+.header h1{font-size:16px;font-weight:700}
+.view{display:none;padding:16px 20px 100px}
+.view.active{display:block}
+.pin-view{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:40px 20px;background:var(--bg);position:fixed;inset:0;z-index:200}
+.pin-icon{font-size:56px;margin-bottom:16px}
+.pin-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.pin-sub{font-size:14px;color:var(--sec);margin-bottom:32px;text-align:center}
+.pin-inputs{display:flex;gap:10px;margin-bottom:24px}
+.pin-digit{width:52px;height:64px;text-align:center;font-size:28px;font-weight:700;border:2px solid var(--border);border-radius:12px;background:var(--card);outline:none;font-family:"SF Mono",monospace}
+.pin-digit:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.pin-digit.filled{border-color:var(--primary);background:#f5f3ff}
+.pin-digit.error{border-color:var(--danger);background:#fef2f2;animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pin-error{color:var(--danger);font-size:14px;min-height:20px;margin-bottom:12px;text-align:center}
+.pin-btn{width:100%;max-width:240px;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer}
+.pin-btn:active{transform:scale(.98)}
+.pin-help{font-size:12px;color:var(--sec);margin-top:24px;text-align:center;line-height:1.6}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h2{font-size:16px;font-weight:600;margin-bottom:12px}
+.input-row{display:flex;gap:8px;margin-bottom:12px}
+.input-row input,.input-row select{flex:1;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none}
+.input-row input:focus,.input-row select:focus{border-color:var(--primary)}
+.btn{padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-danger{background:var(--danger)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+.pin-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.pin-item:last-child{border-bottom:none}
+.pin-code{font-family:"SF Mono",monospace;font-size:20px;font-weight:700;color:var(--primary)}
+.pin-name{font-size:14px;font-weight:500}
+.pin-meta{font-size:12px;color:var(--sec)}
+.badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.badge-admin{background:#dbeafe;color:#1e40af}.badge-doctor{background:#f5f3ff;color:#7c3aed}
+.badge-active{background:#dcfce7;color:#166534}.badge-inactive{background:#fee2e2;color:#991b1b}
+</style>
+</head>
+<body>
+
+<div class="pin-view" id="pinView">
+<div class="pin-icon">🔐</div>
+<div class="pin-title">管理后台</div>
+<div class="pin-sub">TDM 减药决策矩阵</div>
+<div class="pin-inputs">
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autofocus>
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+<input class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+</div>
+<div class="pin-error" id="pinError"></div>
+<button class="pin-btn" onclick="checkAdminPIN()">进入</button>
+<div class="pin-help">默认管理员 PIN: 8888</div>
+</div>
+
+<div id="mainView" style="display:none">
+<div class="header"><h1>🔐 TDM 管理后台</h1></div>
+
+<div class="view active" id="pinsView">
+<div class="card">
+<h2>➕ 添加医生</h2>
+<div class="input-row">
+<input type="text" id="newPin" placeholder="4位PIN码" maxlength="4" inputmode="numeric">
+<input type="text" id="newName" placeholder="医生姓名">
+</div>
+<div class="input-row">
+<select id="newRole"><option value="doctor">医生</option><option value="admin">管理员</option></select>
+<button class="btn" onclick="addPIN()">添加</button>
+</div>
+<div id="addResult"></div>
+</div>
+
+<div class="card">
+<h2>👥 医生列表</h2>
+<div id="pinList"><div style="text-align:center;color:var(--sec);padding:20px">加载中...</div></div>
+</div>
+</div>
+</div>
+
+<script>
+const API = window.location.origin;
+const digits = document.querySelectorAll('.pin-digit');
+digits.forEach((d, i) => {
+    d.addEventListener('input', () => { if(d.value && i < digits.length-1) digits[i+1].focus(); d.classList.toggle('filled', !!d.value); });
+    d.addEventListener('keydown', e => { if(e.key==='Backspace' && !d.value && i>0){digits[i-1].focus();digits[i-1].value='';} if(e.key==='Enter') checkAdminPIN(); });
+});
+
+function checkAdminPIN() {
+    const pin = Array.from(digits).map(d => d.value).join('');
+    fetch(API + '/api/admin/validate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id:pin})})
+        .then(r=>r.json()).then(d => {
+            if(d.valid) {
+                document.getElementById('pinView').style.display = 'none';
+                document.getElementById('mainView').style.display = 'block';
+                loadPINs();
+            } else {
+                document.getElementById('pinError').textContent = 'PIN 码错误';
+                digits.forEach(d => {d.classList.add('error');setTimeout(()=>d.classList.remove('error'),500);});
+            }
+        });
+}
+
+function loadPINs() {
+    fetch(API + '/api/admin/pins').then(r=>r.json()).then(d => {
+        let html = '';
+        d.pins.forEach(p => {
+            html += `<div class="pin-item">
+                <div>
+                    <div class="pin-code">${p.pin}</div>
+                    <div class="pin-name">${p.doctor_name} <span class="badge badge-${p.role}">${p.role==='admin'?'管理员':'医生'}</span> <span class="badge ${p.is_active?'badge-active':'badge-inactive'}">${p.is_active?'启用':'禁用'}</span></div>
+                    <div class="pin-meta">创建于 ${p.created_at?.substring(0,10)||'-'} ${p.last_used?'最后使用: '+p.last_used.substring(0,16):'从未使用'}</div>
+                </div>
+                <div style="display:flex;gap:4px">
+                    <button class="btn btn-sm ${p.is_active?'btn-danger':''}" onclick="togglePIN('${p.pin}')">${p.is_active?'禁用':'启用'}</button>
+                    <button class="btn btn-sm btn-danger" onclick="deletePIN('${p.pin}')">删除</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('pinList').innerHTML = html || '<div style="text-align:center;color:var(--sec);padding:20px">无医生</div>';
+    });
+}
+
+function addPIN() {
+    const pin = document.getElementById('newPin').value.trim();
+    const name = document.getElementById('newName').value.trim();
+    const role = document.getElementById('newRole').value;
+    if(!pin || !name || pin.length !== 4) { document.getElementById('addResult').innerHTML = '<p style="color:var(--danger)">请输入4位PIN码和医生姓名</p>'; return; }
+    fetch(API + '/api/admin/pins/add', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin, doctor_name:name, role})})
+        .then(r=>r.json()).then(d => {
+            if(d.success) { document.getElementById('addResult').innerHTML = '<p style="color:var(--success)">✅ 已添加</p>'; document.getElementById('newPin').value=''; document.getElementById('newName').value=''; loadPINs(); }
+            else { document.getElementById('addResult').innerHTML = '<p style="color:var(--danger)">❌ ' + d.error + '</p>'; }
+        });
+}
+
+function deletePIN(pin) {
+    if(!confirm('确定删除 PIN '+pin+'？')) return;
+    fetch(API+'/api/admin/pins/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})}).then(()=>loadPINs());
+}
+
+function togglePIN(pin) {
+    fetch(API+'/api/admin/pins/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})}).then(()=>loadPINs());
+}
+</script>
+</body>
+</html>

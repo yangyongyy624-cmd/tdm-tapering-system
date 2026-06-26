@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#7c3aed">
+<title>TDM 医生端</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--primary:#7c3aed;--bg:#f5f7fa;--card:#fff;--border:#e2e8f0;--text:#1a1a2e;--sec:#64748b;--danger:#ef4444;--green:#22c55e;--yellow:#f59e0b}
+body{font-family:-apple-system,"SF Pro SC","PingFang SC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+.header{background:var(--primary);color:#fff;padding:16px 20px;padding-top:max(16px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-left{display:flex;flex-direction:column}
+.header-title{font-size:18px;font-weight:700}
+.header-doctor{font-size:12px;opacity:.9}
+.header-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:14px}
+.content{padding:16px 20px}
+.search-bar{display:flex;gap:8px;margin-bottom:16px}
+.search-bar input{flex:1;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px}
+.search-bar button{padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:12px}
+.search-bar .btn-back{padding:12px 16px;background:var(--sec);color:#fff;border:none;border-radius:12px;display:none}
+.search-bar .btn-back.visible{display:block}
+.section-title{font-size:16px;font-weight:600;margin:20px 0 12px;display:flex;justify-content:space-between;align-items:center}
+.btn-new{background:var(--primary);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:14px}
+.patient-list{display:flex;flex-direction:column;gap:10px}
+.patient-card{background:var(--card);border-radius:12px;padding:14px;border-left:3px solid var(--border);cursor:pointer}
+.patient-card:active{transform:scale(.98)}
+.patient-card.continue{border-left-color:var(--green)}
+.patient-card.slow_down{border-left-color:var(--yellow)}
+.patient-card.pause{border-left-color:var(--danger)}
+.patient-date{font-size:12px;color:var(--sec)}
+.patient-decision{font-size:14px;font-weight:600;margin:4px 0}
+.patient-scores{font-size:12px;color:var(--sec)}
+.empty{text-align:center;padding:40px;color:var(--sec)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:90%;max-width:360px;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:16px}
+.modal-input{width:100%;padding:12px;border:2px solid var(--border);border-radius:12px;font-size:14px;margin-bottom:12px}
+.modal-btns{display:flex;gap:8px}
+.modal-btns button{flex:1;padding:12px;border:none;border-radius:12px;font-size:14px;font-weight:600}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-cancel{background:var(--bg);color:var(--text)}
+.btn-close{background:var(--sec);color:#fff}
+.qr-display{text-align:center;padding:16px}
+.qr-code-img{margin:12px auto;display:block;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.qr-code-text{font-size:24px;font-weight:700;color:var(--primary);letter-spacing:4px;font-family:"SF Mono",monospace}
+.qr-url{font-size:12px;color:var(--sec);word-break:break-all;background:var(--bg);padding:8px;border-radius:8px;margin-top:8px}
+.result-msg{margin-top:8px;padding:8px 12px;border-radius:8px;font-size:14px}
+.result-msg.success{background:#f0fdf4;color:#166534}
+.result-msg.error{background:#fef2f2;color:#991b1b}
+.result-msg.waiting{background:#fef3c7;color:#92400e}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;animation:pulse 1.5s infinite}
+.status-dot.waiting{background:#f59e0b}
+.status-dot.done{background:#22c55e;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.detail-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:none;align-items:flex-end;justify-content:center}
+.detail-modal.active{display:flex}
+.detail-content{background:#fff;border-radius:16px 16px 0 0;width:100%;max-height:80vh;overflow-y:auto;padding:24px 20px 40px}
+.detail-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.detail-close{background:none;border:none;font-size:24px;color:var(--sec);cursor:pointer}
+.score-ref{background:#f0fdf4;border:2px solid #22c55e;border-radius:10px;padding:12px;margin-bottom:14px}
+.score-ref-title{font-size:14px;font-weight:700;margin-bottom:8px}
+.score-row{display:flex;padding:4px 8px;border-radius:5px;margin-bottom:2px;font-size:12px}
+.score-row.g{background:#dcfce7;color:#166534}
+.score-row.y{background:#fef3c7;color:#92400e}
+.score-row.r{background:#fee2e2;color:#991b1b}
+.score-total{margin-top:8px;padding:8px;border-radius:8px;font-size:15px;font-weight:700;text-align:center}
+.scale-section{margin:14px 0;padding:12px;background:#f8fafc;border-radius:10px}
+.scale-name{font-size:14px;font-weight:600;color:#7c3aed;margin-bottom:10px}
+.question{background:#fff;border-radius:8px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.question-num{font-size:13px;font-weight:600;margin-bottom:6px}
+.options{display:flex;gap:4px;flex-wrap:wrap}
+.opt{padding:4px 8px;border-radius:6px;font-size:12px;border:1.5px solid var(--border);color:var(--sec)}
+.opt.selected{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed;font-weight:600}
+.opt.positive{border-color:#fca5a5;color:#991b1b;background:#fef2f2}
+.opt.positive.selected{border-color:#ef4444;background:#fee2e2;font-weight:700}
+.opt b{font-size:10px;opacity:.6;margin-left:2px}
+</style>
+</head>
+<body>
+<div class="header">
+<div class="header-left">
+<div class="header-title">TDM 医生端</div>
+<div class="header-doctor" id="doctorName">加载中...</div>
+</div>
+<button class="header-btn" onclick="window.doLogout()">退出</button>
+</div>
+<div class="content">
+<div class="search-bar">
+<button class="btn-back" id="btnBack" onclick="window.showAllPatients()">←</button>
+<input id="patientId" placeholder="输入患者ID/姓名/手机号搜索">
+<button onclick="window.searchPatient()">搜索</button>
+</div>
+<div class="section-title">
+<span id="listTitle">我的患者</span>
+<div style="display:flex;gap:6px">
+<button class="btn-new" id="btnSelect" onclick="window.toggleSelect()" style="display:none;background:var(--sec)">多选</button>
+<button class="btn-new" onclick="window.showCreateModal()">+ 新建评估</button>
+</div>
+</div>
+<div id="deleteBar" style="display:none;gap:6px;margin-bottom:12px">
+<button class="btn-new" onclick="window.selectAll()" style="background:var(--sec)">全选</button>
+<button class="btn-new" id="btnDelete" onclick="window.deleteSelected()" style="display:none;background:var(--danger)">删除选中</button>
+<button class="btn-new" onclick="window.cancelSelect()" style="background:var(--bg);color:var(--text)">取消</button>
+</div>
+<div id="patientList" class="patient-list">
+<div class="empty">加载中...</div>
+</div>
+</div>
+<!-- 新建评估弹窗 -->
+<div class="modal-overlay" id="createModal" onclick="if(event.target===this)window.closeCreateModal()">
+<div class="modal">
+<div class="modal-title">新建患者评估</div>
+<input class="modal-input" id="newPatientId" placeholder="患者ID或手机号">
+<input class="modal-input" id="newPhone" placeholder="手机号（可选）">
+<div class="modal-btns">
+<button class="btn-cancel" onclick="window.closeCreateModal()">取消</button>
+<button class="btn-primary" id="btnCreate" onclick="window.createAssessment()">创建</button>
+</div>
+<div id="createResult"></div>
+</div>
+</div>
+<!-- 患者详情弹窗 -->
+<div class="detail-modal" id="detailModal" onclick="if(event.target===this)window.closeDetailModal()">
+<div class="detail-content">
+<div class="modal-title" id="detailTitle">患者详情</div>
+<div id="detailContent"></div>
+<button class="btn-cancel" style="width:100%;margin-top:16px" onclick="window.closeDetailModal()">关闭</button>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+
+// 北京时间转换（UTC+8）
+function toBeijingTime(utcStr) {
+  if (!utcStr) return '-';
+  var d = new Date(utcStr.replace(' ', 'T') + '+00:00');
+  var bj = d; // 浏览器自动转换UTC到本地时间
+  var pad = n => n < 10 ? '0' + n : '' + n;
+  return bj.getFullYear() + '-' + pad(bj.getMonth()+1) + '-' + pad(bj.getDate()) + ' ' + pad(bj.getHours()) + ':' + pad(bj.getMinutes());
+}
+
+const API = window.location.origin;
+var DOCTOR_PIN = new URLSearchParams(window.location.search).get('pin') || localStorage.getItem('tdm_doctor_pin');
+if (!DOCTOR_PIN) {
+  location.replace('/simple-login.html');
+}
+// 保存到 localStorage
+localStorage.setItem('tdm_doctor_pin', DOCTOR_PIN);
+let currentDoctorName = '医生';
+let pollingTimer = null;
+let currentSessionId = null;
+let isSearchMode = false;
+let selectMode = false;
+let selectedSessions = new Set();
+
+// 量表数据 — 评分标准 + 选项
+const SCALE_DATA = {
+  screening: {
+    label: '撤药筛查', max: 30,
+    ranges: [{min:0,max:6,label:'无/轻度',cls:'g'},{min:7,max:12,label:'中度',cls:'y'},{min:13,max:18,label:'重度',cls:'r'},{min:19,max:30,label:'极重度',cls:'r'}],
+    opts: ['无','轻度','中度','重度'], pos: [0,0,1,1]
+  },
+  phq9: {
+    label: 'PHQ-9', max: 27,
+    ranges: [{min:0,max:4,label:'无',cls:'g'},{min:5,max:9,label:'轻度',cls:'g'},{min:10,max:14,label:'中度',cls:'y'},{min:15,max:19,label:'中重度',cls:'r'},{min:20,max:27,label:'重度',cls:'r'}],
+    opts: ['完全没有','有几天','一半以上','几乎每天'], pos: [0,0,1,1]
+  },
+  gad7: {
+    label: 'GAD-7', max: 21,
+    ranges: [{min:0,max:4,label:'极小',cls:'g'},{min:5,max:9,label:'轻度',cls:'g'},{min:10,max:14,label:'中度',cls:'y'},{min:15,max:21,label:'重度',cls:'r'}],
+    opts: ['完全没有','有几天','一半以上','几乎每天'], pos: [0,0,1,1]
+  },
+  cssrs: {
+    label: 'C-SSRS', max: '-',
+    ranges: [{min:0,max:0,label:'无风险',cls:'g'},{min:1,max:1,label:'低风险',cls:'y'},{min:2,max:2,label:'中风险',cls:'r'},{min:3,max:5,label:'高风险',cls:'r'}],
+    opts: ['否','是'], pos: [0,1]
+  },
+  dess: {
+    label: 'DESS', max: 43,
+    ranges: [{min:0,max:3,label:'无临床意义',cls:'g'},{min:4,max:10,label:'轻度',cls:'y'},{min:11,max:20,label:'中度',cls:'r'},{min:21,max:43,label:'重度',cls:'r'}],
+    opts: ['否','是'], pos: [1]
+  },
+  ciwa_b: {
+    label: 'CIWA-B', max: 80,
+    ranges: [{min:0,max:9,label:'轻度',cls:'g'},{min:10,max:19,label:'中度',cls:'y'},{min:20,max:67,label:'重度',cls:'r'}],
+    opts: ['0 无','1','2','3','4','5','6','7 严重'], pos: [0,0,1,1,1,1,1,1],
+    customMaxItems: [7,7,7,7,7,7,7,7,7,4],
+  },
+  ap_withdrawal_short: {
+    label: 'AP撤药', max: 39,
+    ranges: [{min:0,max:8,label:'无/轻度',cls:'g'},{min:9,max:20,label:'中度',cls:'y'},{min:21,max:39,label:'重度',cls:'r'}],
+    opts: ['无','轻度','中度','重度'], pos: [0,0,1,1]
+  },
+  ymrs: {
+    label: 'YMRS', max: 60,
+    ranges: [{min:0,max:12,label:'缓解',cls:'g'},{min:13,max:19,label:'轻躁狂',cls:'y'},{min:20,max:37,label:'躁狂',cls:'r'},{min:38,max:60,label:'重度',cls:'r'}],
+    opts: ['0 无','1','2 轻度','3','4 中度','5','6','7','8 重度'], pos: [0,0,1,1,1,1,1,1,1]
+  },
+  madrs: {
+    label: 'MADRS', max: 60,
+    ranges: [{min:0,max:6,label:'正常',cls:'g'},{min:7,max:19,label:'轻度',cls:'y'},{min:20,max:34,label:'中度',cls:'r'},{min:35,max:60,label:'重度',cls:'r'}],
+    opts: ['0 正常','1','2 轻度','3','4 中度','5','6 重度'], pos: [0,0,1,1,1,1,1]
+  }
+};
+
+window.getDoctorInfo = function() {
+  if (!DOCTOR_PIN) {
+    document.getElementById('doctorName').textContent = '未登录';
+    return;
+  }
+  fetch(API + '/api/admin/validate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_id: DOCTOR_PIN})
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.valid && d.name) {
+        currentDoctorName = d.name;
+        document.getElementById('doctorName').textContent = '👤 ' + d.name;
+      } else {
+        document.getElementById('doctorName').textContent = 'PIN无效';
+      }
+    })
+    .catch(function() {
+      document.getElementById('doctorName').textContent = '网络错误';
+    });
+};
+
+window.showCreateModal = function() {
+  document.getElementById('createModal').classList.add('active');
+  document.getElementById('createResult').innerHTML = '';
+  document.getElementById('newPatientId').value = '';
+  document.getElementById('newPhone').value = '';
+  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+};
+
+window.closeCreateModal = function() {
+  document.getElementById('createModal').classList.remove('active');
+  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+};
+
+window.closeDetailModal = function() {
+  document.getElementById('detailModal').classList.remove('active');
+};
+
+window.createAssessment = function() {
+  const pid = document.getElementById('newPatientId').value.trim();
+  const phone = document.getElementById('newPhone').value.trim();
+  const result = document.getElementById('createResult');
+  const btn = document.getElementById('btnCreate');
+  
+  if (!pid) {
+    result.innerHTML = '<div class="result-msg error">请输入患者ID</div>';
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = '创建中...';
+  result.innerHTML = '<div class="result-msg">正在创建...</div>';
+  
+  const url = API + '/api/session/create?patient_id=' + encodeURIComponent(pid) + '&phone=' + encodeURIComponent(phone) + '&drug_categories=&doctor_pin=' + DOCTOR_PIN;
+  
+  fetch(url, { method: 'POST' })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      btn.disabled = false;
+      btn.textContent = '创建';
+      if (d.session_id) {
+        currentSessionId = d.session_id;
+        const qrUrl = API + '/patient-confirm.html?code=' + d.access_code;
+        
+        result.innerHTML = '<div class="qr-display">' +
+          '<div style="font-size:14px;margin-bottom:8px">✅ 创建成功</div>' +
+          '<div id="qrCode"></div>' +
+          '<div class="qr-code-text">' + d.access_code + '</div>' +
+          '<div class="qr-url">' + qrUrl + '</div>' +
+          '<div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px" id="statusBox">' +
+          '<div><span class="status-dot waiting"></span><strong>等待患者扫码答题...</strong></div>' +
+          '<div style="font-size:12px;color:#92400e;margin-top:4px">请让患者用微信扫一扫上方二维码</div>' +
+          '</div>' +
+          '<div style="margin-top:12px"><button class="btn-close" style="width:100%;padding:12px;border:none;border-radius:8px;background:#7c3aed;color:#fff" onclick="window.closeCreateModal()">关闭</button></div>' +
+          '</div>';
+        
+        setTimeout(function() {
+          if (typeof QRCode !== 'undefined') {
+            new QRCode(document.getElementById("qrCode"), {
+              text: qrUrl,
+              width: 180,
+              height: 180
+            });
+          }
+        }, 100);
+        
+        startPolling(d.session_id);
+        window.loadPatients();
+      } else {
+        result.innerHTML = '<div class="result-msg error">创建失败</div>';
+      }
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      btn.textContent = '创建';
+      result.innerHTML = '<div class="result-msg error">创建失败: ' + e.message + '</div>';
+    });
+};
+
+function startPolling(sessionId) {
+  if (pollingTimer) clearInterval(pollingTimer);
+  
+  pollingTimer = setInterval(function() {
+    fetch(API + '/api/admin/report', {
+      headers: {'X-Admin-Pin': DOCTOR_PIN}
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var assessments = d.assessments || [];
+        for (var i = 0; i < assessments.length; i++) {
+          if (assessments[i].session_id === sessionId && assessments[i].completion_status === 'completed') {
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+            
+            var statusBox = document.getElementById('statusBox');
+            if (statusBox) {
+              statusBox.style.background = '#f0fdf4';
+              statusBox.innerHTML = '<div><span class="status-dot done"></span><strong>✅ 患者已完成答题！</strong></div>';
+            }
+            
+            window.loadPatients();
+            setTimeout(window.closeCreateModal, 3000);
+            return;
+          }
+        }
+      })
+      .catch(function() {});
+  }, 3000);
+}
+
+window.loadPatients = function() {
+  isSearchMode = false;
+  document.getElementById('btnBack').classList.remove('visible');
+  document.getElementById('listTitle').textContent = '我的患者';
+  document.getElementById('patientId').value = '';
+
+  fetch(API + '/api/admin/report', {
+    headers: {'X-Admin-Pin': DOCTOR_PIN}
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      const list = document.getElementById('patientList');
+      const myPatients = (d.assessments || []).filter(function(a) {
+        return a.doctor_pin === DOCTOR_PIN && a.completion_status === 'completed';
+      });
+      document.getElementById('btnSelect').style.display = myPatients.length > 0 ? 'block' : 'none';
+      if (myPatients.length === 0) {
+        list.innerHTML = '<div class="empty">暂无患者，点击「+ 新建评估」创建</div>';
+        return;
+      }
+      let html = '';
+      myPatients.forEach(function(a) {
+        var dec = (a.overall_decision || '评估中').toLowerCase().replace(/ /g, '_');
+        var cls = ['continue','slow_down','pause'].indexOf(dec) !== -1 ? dec : '';
+        var phone = a.phone ? a.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '-';
+        var name = a.name || a.patient_id;
+        var checked = selectedSessions.has(a.session_id) ? 'checked' : '';
+        var checkbox = selectMode ? '<input type="checkbox" style="margin-right:8px;width:18px;height:18px" ' + checked + ' onclick="event.stopPropagation();window.toggleSession(\'' + a.session_id + '\')">' : '';
+        var clickAction = selectMode ? '' : ' onclick="window.showPatientDetail(\'' + a.session_id + '\',\'' + a.patient_id + '\')"';
+        html += '<div class="patient-card ' + cls + '"' + clickAction + '>' +
+          checkbox +
+          '<div class="patient-date">' + toBeijingTime(a.created_at) + '</div>' +
+          '<div class="patient-decision">' + name + ' (' + phone + ') - ' + (a.overall_decision || '评估中') + ' ' + (a.cssrs_override ? '⛔' : '') + '</div>' +
+          '<div class="patient-scores">筛查' + (a.screening_score || '-') + ' PHQ9 ' + (a.phq9_score || '-') + ' GAD7 ' + (a.gad7_score || '-') + '</div>' +
+          '</div>';
+      });
+      list.innerHTML = html;
+    })
+    .catch(function() {
+      document.getElementById('patientList').innerHTML = '<div class="empty">加载失败</div>';
+    });
+};
+
+window.toggleSelect = function() {
+  selectMode = !selectMode;
+  selectedSessions.clear();
+  document.getElementById('btnSelect').textContent = selectMode ? '取消' : '多选';
+  document.getElementById('deleteBar').style.display = selectMode ? 'flex' : 'none';
+  document.getElementById('btnDelete').style.display = 'none';
+  window.loadPatients();
+};
+window.toggleSession = function(sid) {
+  if (selectedSessions.has(sid)) selectedSessions.delete(sid);
+  else selectedSessions.add(sid);
+  document.getElementById('btnDelete').style.display = selectedSessions.size > 0 ? 'block' : 'none';
+};
+window.selectAll = function() {
+  var checks = document.querySelectorAll('.patient-card input[type="checkbox"]');
+  if (selectedSessions.size === checks.length) { selectedSessions.clear(); }
+  else { checks.forEach(function(c) { var m = c.getAttribute('onclick').match(/'([^']+)'/); if(m) selectedSessions.add(m[1]); }); }
+  document.getElementById('btnDelete').style.display = selectedSessions.size > 0 ? 'block' : 'none';
+  window.loadPatients();
+};
+window.cancelSelect = function() {
+  selectMode = false; selectedSessions.clear();
+  document.getElementById('btnSelect').textContent = '多选';
+  document.getElementById('deleteBar').style.display = 'none';
+  window.loadPatients();
+};
+window.deleteSelected = function() {
+  if (!selectedSessions.size) return;
+  if (!confirm('确定删除 ' + selectedSessions.size + ' 个患者？')) return;
+  var ids = Array.from(selectedSessions);
+  fetch(API + '/api/admin/report/delete', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Admin-Pin': DOCTOR_PIN},
+    body: JSON.stringify({session_ids: ids})
+  }).then(function(r) { return r.json(); })
+  .then(function(d) {
+    alert('已删除 ' + (d.deleted_count || ids.length) + ' 个');
+    window.cancelSelect();
+  });
+};
+
+window.showAllPatients = function() {
+  window.loadPatients();
+};
+
+window.searchPatient = function() {
+  const query = document.getElementById('patientId').value.trim();
+  if (!query) { window.loadPatients(); return; }
+  
+  isSearchMode = true;
+  document.getElementById('btnBack').classList.add('visible');
+  document.getElementById('listTitle').textContent = '搜索结果';
+  
+  fetch(API + '/api/admin/report?q=' + encodeURIComponent(query), {
+    headers: {'X-Admin-Pin': DOCTOR_PIN}
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      const list = document.getElementById('patientList');
+      // 只显示已完成的患者（已提交评估）
+      const myPatients = (d.assessments || []).filter(function(a) {
+        return a.doctor_pin === DOCTOR_PIN && a.completion_status === 'completed';
+      });
+      if (myPatients.length === 0) {
+        list.innerHTML = '<div class="empty">未找到匹配的患者</div>';
+        return;
+      }
+      let html = '';
+      myPatients.forEach(function(a) {
+        var dec = (a.overall_decision || '评估中').toLowerCase().replace(/ /g, '_');
+        var cls = ['continue','slow_down','pause'].indexOf(dec) !== -1 ? dec : '';
+        var phone = a.phone ? a.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '-';
+        var name = a.name || a.patient_id;
+        html += '<div class="patient-card ' + cls + '" onclick="window.showPatientDetail(\'' + a.session_id + '\',\'' + a.patient_id + '\')">' +
+          '<div class="patient-date">' + toBeijingTime(a.created_at) + '</div>' +
+          '<div class="patient-decision">' + name + ' (' + phone + ') - ' + (a.overall_decision || '评估中') + ' ' + (a.cssrs_override ? '⛔' : '') + '</div>' +
+          '<div class="patient-scores">筛查' + (a.screening_score || '-') + ' PHQ9 ' + (a.phq9_score || '-') + ' GAD7 ' + (a.gad7_score || '-') + '</div>' +
+          '</div>';
+      });
+      list.innerHTML = html;
+    })
+    .catch(function(e) {
+      document.getElementById('patientList').innerHTML = '<div class="empty">搜索失败</div>';
+    });
+};
+
+window.showPatientDetail = function(sessionId, patientId) {
+  document.getElementById('detailModal').classList.add('active');
+  document.getElementById('detailTitle').textContent = '患者: ' + patientId;
+  document.getElementById('detailContent').innerHTML = '<div class="empty">加载中...</div>';
+  
+  fetch(API + '/api/doctor/detail/' + sessionId + '?doctor_pin=' + DOCTOR_PIN)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      let html = '';
+      if (d.patient) {
+        html += '<div style="margin-bottom:12px;padding:12px;background:#f8fafc;border-radius:8px">' +
+          '<div>📱 手机: ' + (d.patient.phone || '-') + '</div>' +
+          '<div>👤 姓名: ' + (d.patient.name || '-') + '</div>' +
+          '</div>';
+      }
+      if (d.tdm_decision) {
+        var td = d.tdm_decision;
+        var cls = td.overall_decision === '继续减药' ? 'green' : td.overall_decision === '减速减药' ? 'yellow' : 'red';
+        html += '<div style="margin-bottom:12px;padding:12px;border-radius:8px;background:#' + (cls === 'green' ? 'f0fdf4' : cls === 'yellow' ? 'fefce8' : 'fef2f2') + '">' +
+          '<div style="font-weight:700;color:#' + (cls === 'green' ? '166534' : cls === 'yellow' ? '854d0e' : '991b1b') + '">' + td.overall_decision + '</div>' +
+          '<div style="font-size:12px;margin-top:4px">' + (td.cssrs_override ? '⛔ C-SSRS 阳性，已强制停止减药' : '') + '</div>' +
+          '</div>';
+      }
+      // 显示全部量表
+      const scaleLabels = {
+        screening: '撤药筛查', phq9: 'PHQ-9抑郁', gad7: 'GAD-7焦虑', cssrs: 'C-SSRS自杀风险',
+        dess: 'DESS抗抑郁药撤药', ciwa_b: 'CIWA-B苯二氮䓬撤药',
+        ap_withdrawal_short: 'AP撤药(抗精神病药)', ap_withdrawal: 'AP撤药完整版',
+        ymrs: 'YMRS 躁狂评定', madrs: 'MADRS 抑郁评定'
+      };
+      const allScales = ['screening','phq9','gad7','cssrs','dess','ciwa_b','ap_withdrawal_short','ymrs','madrs'];
+      
+      // 量表得分
+      html += '<div style="margin:12px 0;padding:12px;background:#f8fafc;border-radius:8px"><strong>全部量表得分</strong><ul style="margin:8px 0 0 16px;padding:0;font-size:14px">';
+      allScales.forEach(function(name) {
+        if (d[name]) {
+          const label = scaleLabels[name] || name;
+          const score = d[name].total_score !== undefined ? d[name].total_score : d[name].severity_score;
+          const baseline = d[name].baseline ? ' (基线)' : '';
+          html += '<li style="margin:4px 0">' + label + ': ' + score + '分' + baseline + '</li>';
+        }
+      });
+      html += '</ul></div>';
+      
+      // 答题详情 — 评分标准 + 完整选项 + 阳性标红
+      const allScaleKeys = ['screening','phq9','gad7','cssrs','dess','ciwa_b','ap_withdrawal_short','ymrs','madrs'];
+      allScaleKeys.forEach(function(name) {
+        if (!d[name]) return;
+        const sd = SCALE_DATA[name];
+        if (!sd) return;
+        const score = d[name].total_score !== undefined ? d[name].total_score : d[name].severity_score;
+
+        html += '<div class="scale-section">';
+        html += '<div class="scale-name">' + sd.label + (score !== undefined ? ' — ' + score + '/' + sd.max : '') + '</div>';
+
+        // 评分标准
+        html += '<div class="score-ref"><div class="score-ref-title">评分标准</div>';
+        sd.ranges.forEach(function(r) {
+          html += '<div class="score-row ' + r.cls + '"><span style="min-width:45px;font-weight:600">' + r.min + '-' + r.max + '分</span><span>' + r.label + '</span></div>';
+        });
+        if (score !== undefined && score !== null) {
+          var cls = 'g';
+          sd.ranges.forEach(function(r) { if (score >= r.min && score <= r.max) cls = r.cls; });
+          var bg = cls==='g'?'#dcfce7':cls==='y'?'#fef3c7':'#fee2e2';
+          var fg = cls==='g'?'#166534':cls==='y'?'#92400e':'#991b1b';
+          html += '<div class="score-total" style="background:' + bg + ';color:' + fg + '">患者得分: ' + score + ' / ' + sd.max + '</div>';
+        }
+        html += '</div>';
+
+        // 题目 + 选项
+        if (d[name].answers && d[name].answers.length > 0) {
+          d[name].answers.forEach(function(a, i) {
+            html += '<div class="question">';
+            html += '<div class="question-num">Q' + (i+1) + '. ' + a.question + '</div>';
+            html += '<div class="options">';
+            if (name === 'cssrs') {
+              html += '<span class="opt ' + (a.answer===0?'selected':'') + '">否 <b>0</b></span>';
+              html += '<span class="opt positive ' + (a.answer===1?'selected':'') + '">是 <b>1</b></span>';
+            } else {
+              sd.opts.forEach(function(opt, j) {
+                var isPos = sd.pos[j];
+                var isSel = j === a.answer;
+                var cls = 'opt';
+                if (isPos) cls += ' positive';
+                if (isSel) cls += ' selected';
+                html += '<span class="' + cls + '">' + opt + ' <b>' + j + '</b></span>';
+              });
+            }
+            html += '</div></div>';
+          });
+        }
+        html += '</div>';
+      });
+      document.getElementById('detailContent').innerHTML = html || '<div class="empty">暂无数据</div>';
+    })
+    .catch(function() {
+      document.getElementById('detailContent').innerHTML = '<div class="empty">加载失败</div>';
+    });
+};
+
+window.doLogout = function() {
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.replace('/doctor-entry.html');
+};
+
+window.addEventListener('DOMContentLoaded', function() {
+  window.getDoctorInfo();
+  window.loadPatients();
+  
+  // 全局自动刷新：每10秒刷新患者列表
+  setInterval(window.loadPatients, 10000);
+});
+</script>
+</body>
+</html>
